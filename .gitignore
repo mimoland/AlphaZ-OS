@@ -1,0 +1,6 @@
+*.o
+*.txt
+*.log
+*.bin
+*.img
+/.vscode
