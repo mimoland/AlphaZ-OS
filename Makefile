@@ -29,9 +29,9 @@ all: $(SUBDIRS)
 
 buildimg :
 	dd if=$(BUILDDIR)/boot.bin of=a.img bs=512 count=1 conv=notrunc
-	# sudo mount -o loop a.img /mnt/floppy/
-	# sudo cp -fv $(BUILDDIR)/* /mnt/floppy/
-	# sudo umount /mnt/floppy
+	sudo mount -o loop a.img /mnt/floppy/
+	sudo cp -fv $(BUILDDIR)/loader.bin /mnt/floppy/
+	sudo umount /mnt/floppy
 
 image: all buildimg
 

@@ -19,7 +19,7 @@ BS_DrvNum	db 0		; 中断 13 的驱动器号
 BS_Reserved1	db 0		; 未使用
 BS_BootSig	db 29h		; 扩展引导标记 (29h)
 BS_VolID	dd 0		; 卷序列号
-BS_VolLab	db 'OrangeS0.02'; 卷标, 必须 11 个字节
+BS_VolLab	db 'AlphaOS    '; 卷标, 必须 11 个字节
 BS_FileSysType	db 'FAT12   '	; 文件系统类型, 必须 8个字节
 
 
