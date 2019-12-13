@@ -26,7 +26,7 @@ _start:
 	mov	gs, ax
 
 	call	clear_screen
-	mov	ax, 0302h
+	mov	ax, 0x0000
 	mov	cx, BootMessage
 
 	call	disp_str
@@ -60,14 +60,14 @@ disp_str:
 
 	; 算出屏幕输出的偏移地址
 	push	ax
-	mov	ah, al
+	mov	al, ah
 	mov	ah, ColOfScreen
-	add	ah, ah
+	shl	ah, 1			; 乘2
 	mul	ah
 	mov	di, ax
 	pop	ax
 	xor	ah, ah
-	add	di, ax
+	shl	al, 1
 	add	di, ax
 
 	mov 	si, cx
