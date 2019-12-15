@@ -18,6 +18,23 @@ OffsetOfKernel		equ	0h			; kernel的偏移地址
 	nop
 	; 这里引用的目的只是使用其中的变量，并不是fat12格式的头
 	%include "fat12header.inc"
+	%include "pm.inc"
+
+; 段描述符
+; 			段基址 段界限， 段属性
+desc_null:	Descriptor  	0, 	 0, 		 0				 ; 空描述符
+desc_code:	Descriptor 	0, 	 0xfffff, 	DA_CR  |DA_32 | DA_LIMIT_4K  	; 4GB代码段
+desc_data_rw:	Descriptor 	0, 	 0xfffff, 	DA_DRW |DA_32 | DA_LIMIT_4K 	; 4GB数据段
+desc_video:	Descriptor 	0xb8000, 0xffff,	DA_DRW |DA_DPL3	   		; 显存
+
+; 用于gdtr的加载
+gdt_len:	equ	$ - desc_null
+gdt_ptr:	dw	gdt_len - 1							; 界限
+		dd 	BaseOfLoaderPhyAddr + desc_null					; 基址
+; 段选择子
+selector_code:		equ	desc_code    - desc_null
+selector_data:		equ	desc_data_rw - desc_null
+selector_video:		equ	desc_video   - desc_video + SA_RPL3			; RPL为3
 
 _start:
 	; 初始化寄存器
@@ -123,12 +140,31 @@ _load_kernel_goon:
 	jmp	_load_kernel_goon
 
 _kernel_loaded:
+	; kernel加载完后，先关闭软驱马达
+	call	kill_motor
 	mov	ax, 0x0200
 	mov	cx, KernelLoadedMessage
 	call	real_mode_disp_str
 
-	; 转移到kernel去执行
-	jmp	BaseOfKernel:OffsetOfKernel
+	; 开始进入保护模式
+	; 加载gdtr
+	lgdt	[gdt_ptr]
+
+	cli
+
+	; 打开A20地址线
+	in	al, 0x92
+	or 	al, 0x02
+	out 	0x92, al
+
+	; 打开cr0中的PE位
+	mov	eax, cr0
+	or	eax, 1
+	mov	cr0, eax
+
+	; 跳入保护模式
+
+	jmp 	dword selector_code:(BaseOfLoaderPhyAddr+protect_mode)
 
 	hlt
 
@@ -239,6 +275,15 @@ label_even_2:
 	pop	es
 	ret
 
+; 关闭软驱马达
+kill_motor:
+	pushad
+	mov	dx, 0x03f2
+	mov	al, 0
+	out	dx, al
+	popad
+	ret
+
 
 ; 一些消息
 RowOfMessageBegin:	db	3			; 消息开始的行数
@@ -254,6 +299,58 @@ SectorNo:	dw 0			; 要读的扇区号
 bodd:		db 0			; 是奇数吗
 
 ; ======================== 以下为保护模式 ==============================
+
+; 将内存进行32位对齐
+align	32
+
+[bits 32]
+
+protect_mode:
+		mov	ax, selector_data
+		mov	ds, ax
+		mov	es, ax
+		mov	fs, ax
+		mov	ss, ax
+		mov	esp, TopOfStack
+
+		mov	ecx, ComeInProtModeMessage
+		call	disp_str
+
+		hlt
+
+; 保护模式下的字符串显示，不能再使用中断
+; ecx=要显示的字符串首地址
+disp_str:
+	pushad
+	xor	eax, eax
+	mov	al, [RowOfMessageBeginProtMode]
+	inc	byte [RowOfMessageBeginProtMode]
+	mov	ah, ColOfScreen
+	shl	ah, 1
+	mul	ah
+	mov	edi, eax
+	mov	esi, ecx
+_disp_str_lable:
+	mov	al, [ds:esi]
+	cmp	al, 0
+	jz	_disp_str_end
+	mov	[gs:edi], al
+	inc	edi
+	mov	byte [gs:edi], 0x02
+	inc	edi
+	inc 	esi
+	jmp	_disp_str_lable
+_disp_str_end:
+	popad
+	ret
+
+
+; 保护模式中的一些消息, 一定注意进入保护模式后地址的变化
+; RowOfMessageBegin 还是使用前面的
+RowOfMessageBeginProtMode	equ	RowOfMessageBegin + BaseOfLoaderPhyAddr
+
+_ComeInProtModeMessage:	db  'program had jmped in protect mode now....', 0
+ComeInProtModeMessage	equ	_ComeInProtModeMessage + BaseOfLoaderPhyAddr
 
 ; 下面开辟一些内存空间供程序使用
 BottmOfStack:   times	1024	db	0		; 1k栈空间
