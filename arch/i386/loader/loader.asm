@@ -34,7 +34,7 @@ gdt_ptr:	dw	gdt_len - 1							; 界限
 ; 段选择子
 selector_code:		equ	desc_code    - desc_null
 selector_data:		equ	desc_data_rw - desc_null
-selector_video:		equ	desc_video   - desc_video + SA_RPL3			; RPL为3
+selector_video:		equ	desc_video   - desc_null + SA_RPL3			; RPL为3
 
 _start:
 	; 初始化寄存器
@@ -360,7 +360,9 @@ protect_mode:
 		mov	es, ax
 		mov	fs, ax
 		mov	ss, ax
-		mov	esp, TopOfStack
+		mov	esp, TopOfStackProtMode
+		mov	ax, selector_video
+		mov	gs, ax
 
 		mov	ecx, ComeInProtModeMessage
 		call	disp_str
@@ -402,5 +404,6 @@ _ComeInProtModeMessage:	db  'program had jmped in protect mode now....', 0
 ComeInProtModeMessage	equ	_ComeInProtModeMessage + BaseOfLoaderPhyAddr
 
 ; 下面开辟一些内存空间供程序使用
-BottmOfStack:   times	1024	db	0		; 1k栈空间
-TopOfStack	equ	BaseOfLoaderPhyAddr + $		; 栈顶
+BottmOfStack:   times	1024	db	0				; 1k栈空间
+TopOfStack 		equ	$					; 实模式的栈顶
+TopOfStackProtMode	equ	BaseOfLoaderPhyAddr + TopOfStack 	; 保护模式的栈顶
