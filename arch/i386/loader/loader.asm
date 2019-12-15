@@ -13,6 +13,9 @@ ColOfScreen		equ	80			; 屏幕列数
 BaseOfKernel		equ	08000h			; kernel的段地址
 OffsetOfKernel		equ	0h			; kernel的偏移地址
 
+BaseOfPageDir		equ	100000h			; 页目录基址
+BaseOfPageTable		equ	101000h			; 页表基址
+
 [bits 16]
 	jmp	short _start
 	nop
@@ -367,6 +370,11 @@ protect_mode:
 		mov	ecx, ComeInProtModeMessage
 		call	disp_str
 
+		; 开启内存分页
+		call	setup_mem_page
+		mov	ecx, SetupedPageMessage
+		call	disp_str
+
 		hlt
 
 ; 保护模式下的字符串显示，不能再使用中断
@@ -395,13 +403,61 @@ _disp_str_end:
 	popad
 	ret
 
+; 设置内存分页
+setup_mem_page:
+	pushad
+	; 首先计算需要多少页表和页目录项
+	xor	edx, edx
+	mov	eax, [MemSize]
+	mov	ebx, 0x400000			; 4M, 一个页表对应的内存大小
+	div	ebx
+	mov	ecx, eax
+	test	edx, edx 			; 有余数吗
+	jz	_setup_mem_page_next		; 如果没有余数跳转
+	inc	ecx
+_setup_mem_page_next:
+	; 初始化页目录
+	push	ecx
+	mov	edi, BaseOfPageDir
+	xor	eax, eax
+	mov	eax, BaseOfPageTable | PG_P | PG_USU | PG_RWW
+_setup_mem_page_1:
+
+	stosd
+	add	eax, 4096
+	loop	_setup_mem_page_1
+	; 初始化页表
+	pop eax
+	mov	ebx, 1024
+	mul	ebx
+	mov	ecx, eax
+	mov	edi, BaseOfPageTable
+	xor	eax, eax
+	mov	eax, PG_P | PG_USU | PG_RWW
+_setup_mem_page_2:
+	stosd
+	add	eax, 4096
+	loop	_setup_mem_page_2
+
+	; 初始化相关寄存器
+	mov	eax, BaseOfPageDir
+	mov	cr3, eax
+	mov	eax, cr0
+	or	eax, 0x80000000
+	mov	cr0, eax
+	jmp	_setup_mem_page_end		; 为了刷新处理器中的缓存，这里必须跳转
+_setup_mem_page_end:
+	popad
+	ret
 
 ; 保护模式中的一些消息, 一定注意进入保护模式后地址的变化
 ; RowOfMessageBegin 还是使用前面的
 RowOfMessageBeginProtMode	equ	RowOfMessageBegin + BaseOfLoaderPhyAddr
 
 _ComeInProtModeMessage:	db  'program had jmped in protect mode now....', 0
+_SetupedPageMessage:	db  'setup memary pages is completed...', 0
 ComeInProtModeMessage	equ	_ComeInProtModeMessage + BaseOfLoaderPhyAddr
+SetupedPageMessage	equ	_SetupedPageMessage + BaseOfLoaderPhyAddr
 
 ; 下面开辟一些内存空间供程序使用
 BottmOfStack:   times	1024	db	0				; 1k栈空间
