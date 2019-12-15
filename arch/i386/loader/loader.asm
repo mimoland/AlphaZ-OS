@@ -51,6 +51,45 @@ _start:
 	call	real_mode_disp_str
 
 
+	; 获取内存大小，供保护模式开启分页使用
+	mov	ebx, 0				; ebx = 后续值, 开始时需为 0
+	mov	di, MemCheckARDS		; es:di 指向一个地址范围描述符结构(ARDS)
+_mem_check_begin:
+	mov	eax, 0E820h			; eax = 0000E820h
+	mov	ecx, 20				; ecx = 地址范围描述符结构的大小
+	mov	edx, 0534D4150h			; edx = 'SMAP'
+	int	15h
+	jc	_mem_check_fail
+	; 累加内存
+	mov	eax, [MemSizeTmpLow]
+	add	eax, [MemARDSSizeLow]
+	mov	[MemSizeTmpLow], eax
+	mov	eax, [MemSizeTmpHig]
+	adc	eax, [MemARDSSizeHig]
+	mov	[MemSizeTmpHig], eax
+	; 判断是否检测完
+	cmp	ebx, 0
+	jne	_mem_check_begin
+	jmp	_mem_check_end
+_mem_check_fail:
+	mov	cx, MemCheckFailMessage
+	call	real_mode_disp_str
+
+	hlt
+
+_mem_check_end:
+	; 将要使用的内存大小保存到MemSize处，如果内存大于4GB，则只使用4GB
+	mov	eax, [MemSizeTmpLow]
+	mov	[MemSize], eax
+	cmp	dword [MemSizeTmpHig], 0
+	jz	_mem_save_end					; 内存不大于则保存结束，否则保存0xffffffff到MemSize处
+	mov	eax, 0xffffffff
+	mov	[MemSize], eax
+_mem_save_end:
+	mov	cx, MemCheckEndMessage
+	call	real_mode_disp_str
+
+
 	; 加载内核，和boot中加载loader并无区别
 	; 寻找KERNEL.BIN
 	mov	word [SectorNo], SectorNoOfRootDirectory	; 要读的扇区号
@@ -297,6 +336,16 @@ KernelFileName: db 'KERNEL  BIN'	; loader的文件名，固定长度，注意要
 RootDirSize:	dw 0			; 根目录占用的扇区数，未初始化
 SectorNo:	dw 0			; 要读的扇区号
 bodd:		db 0			; 是奇数吗
+
+; 供内存大小检测所使用的内存空间
+MemCheckFailMessage:	db	'memary check is fail...', 0
+MemCheckEndMessage:	db 	'memary check is end', 0
+MemSize:	dd 	0		; 保存最后要使用的内存大小
+MemSizeTmpLow:	dd	0		; 实际内存大小的低位
+MemSizeTmpHig:	dd	0		; 实际内存大小的高位
+MemCheckARDS:	times 32 db 0		; ARDS描述符的存储位置
+MemARDSSizeLow	equ	MemCheckARDS + 8	; ARDS中内存大小的低32位
+MemARDSSizeHig	equ	MemCheckARDS + 12	; ARDS中内存大小的高32位
 
 ; ======================== 以下为保护模式 ==============================
 
