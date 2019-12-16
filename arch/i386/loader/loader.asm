@@ -12,6 +12,7 @@ ColOfScreen		equ	80			; 屏幕列数
 
 BaseOfKernel		equ	08000h			; kernel的段地址
 OffsetOfKernel		equ	0h			; kernel的偏移地址
+BaseOfKernelPhyAddr	equ	BaseOfKernel*10h 	; kernel的物理地址
 
 BaseOfPageDir		equ	100000h			; 页目录基址
 BaseOfPageTable		equ	101000h			; 页表基址
@@ -364,6 +365,7 @@ protect_mode:
 		mov	fs, ax
 		mov	ss, ax
 		mov	esp, TopOfStackProtMode
+		mov	ebp, TopOfStackProtMode
 		mov	ax, selector_video
 		mov	gs, ax
 
@@ -374,6 +376,12 @@ protect_mode:
 		call	setup_mem_page
 		mov	ecx, SetupedPageMessage
 		call	disp_str
+
+		mov	eax, [BaseOfKernelPhyAddr + 0x18]		; 暂存入口地址
+		call	init_kernel
+
+		; 跳入内核
+		jmp	eax
 
 		hlt
 
@@ -449,6 +457,60 @@ _setup_mem_page_2:
 _setup_mem_page_end:
 	popad
 	ret
+
+; 根据elf头调整kernel在内存中的位置
+init_kernel:
+	pushad
+	xor	esi, esi
+	mov	cx, [BaseOfKernelPhyAddr + 0x2c]
+	movzx	ecx, cx
+	mov	esi, [BaseOfKernelPhyAddr + 0x1c]
+	add	esi, BaseOfKernelPhyAddr
+_init_kernel_begin:
+	mov	eax, [esi + 0]
+	cmp	eax, 0
+	jz	_init_kernel_no_action
+	push	dword [esi + 0x10]
+	mov	eax, [esi + 0x04]
+	add 	eax, BaseOfKernelPhyAddr
+	push	eax
+	push	dword [esi + 0x08]
+	call	memcpy
+	add 	esp, 12
+_init_kernel_no_action:
+	add	esi, 0x20
+	dec	ecx
+	jnz	_init_kernel_begin
+
+	popad
+	ret
+
+
+; 内存拷贝
+; 参数：（目的地址，原地址，长度），全为32位
+memcpy:
+	push	ebp
+	mov	ebp, esp
+
+	push	esi
+	push	edi
+	push	ecx
+
+	mov	edi, [ebp + 8]	; 目的地址
+	mov	esi, [ebp + 12]	; 原地址
+	mov	ecx, [ebp + 16]	; 长度
+	rep 	movsb
+
+	mov	eax, [ebp + 8]	; 返目的地址
+
+	pop	ecx
+	pop	edi
+	pop	esi
+	mov	esp, ebp
+	pop	ebp
+
+	ret
+
 
 ; 保护模式中的一些消息, 一定注意进入保护模式后地址的变化
 ; RowOfMessageBegin 还是使用前面的
