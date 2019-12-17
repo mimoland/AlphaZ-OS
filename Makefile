@@ -65,6 +65,8 @@ debug:
 config:
 	ln -fsn $(ROOTDIR)/include/asm-$(ARCH) include/asm
 	@echo	'/include/asm-$(ARCH) had linked to include/asm'
+	test -d $(BUILDDIR) || mkdir -p $(BUILDDIR)
+	$(MAKE) config -C $(SUBDIRS)
 
 
 $(SUBDIRS): ECHO

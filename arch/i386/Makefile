@@ -23,9 +23,9 @@ OBJS		= $(SUBBUILD)/start.o	\
 
 TARGET		= $(BUILDDIR)/arch.a
 
-.PHONY: all clear
+.PHONY: all clear config
 
-all: $(BOOTOBJS) $(OBJS) $(TARGET)
+all: config $(BOOTOBJS) $(OBJS) $(TARGET)
 
 $(BUILDDIR)/boot.bin : boot/boot.asm include/fat12header.inc
 	$(ASM) $(ASMBFLAGS) -o $@ $<
@@ -44,6 +44,9 @@ $(SUBBUILD)/asm_start.o : kernel/asm_start.c
 
 $(TARGET): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $^
+
+config:
+	test -d $(SUBBUILD) || mkdir -p $(SUBBUILD)
 
 clear:
 	rm -f build/*
