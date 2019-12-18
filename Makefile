@@ -2,75 +2,89 @@
 # kernel入口地址
 ENTRYPOINT = 0x30400
 
-ROOTDIR		= $(shell pwd)
+MAKEFLAGS  += -rR --no-print-directory
 
-MAKE		= 	make
-ASM			= 	nasm
-DASM		=	ndisasm
-CC			= 	gcc
-LD			= 	ld
-AR 			=	ar
+ASM			= nasm
+DASM		= ndisasm
+CC			= gcc
+LD			= ld
+AR 			= ar
 
 # boot编译选项
 ASMBFLAGS	=
 
 # kernel编译选项
-ASMKFLAGS	=	-f elf
-
-CFLAGS		=	-I include/ -c -fno-builtin -fno-common -m32 -fno-stack-protector
-LDFLAGS		=   -m elf_i386 -s -Ttext $(ENTRYPOINT)
-ARFLAGS		=	-rc
+ASMKFLAGS	= -f elf
+CFLAGS		= -I include/ -c -fno-builtin -fno-common -m32 -fno-stack-protector
+LDFLAGS		= -m elf_i386 -s -Ttext $(ENTRYPOINT)
+ARFLAGS		= -rc
 DASMFLAGS	=
+PHONY		:=
 
-ARCH		= i386
-BUILDDIR 	= $(ROOTDIR)/build
-SUBDIRS		= arch/$(ARCH)
+export ASM DASM CC LD AR ASMBFLAGS ASMKFLAGS CFLAGS LDFLAGS ARFLAGS DASMFLAGS PHONY
 
-TARGET		=	$(BUILDDIR)/kernel.bin
-SLIBS		=	$(BUILDDIR)/arch.a
+# 欲生成平台的处理器架构
+ARCH		?= i386
+export ARCH
 
-# 导出子目录中需要用到的变量
-export ROOTDIR
-export ASM DASM CC LD AR ASMBFLAGS ASMKFLAGS CFLAGS LDFLAGS DASMFLAGS ARFLAGS
-export ARCH BUILDDIR SUBDIRS
+srctree		:= $(CURDIR)
+builddir 	:= $(srctree)/build
+export srctree builddir
 
-.PHONY: debug all buildimg image clear config
+alphaz  := $(builddir)/kernel.bin
 
-all: config $(SUBDIRS) $(TARGET)
+boot-bin :=
+
+# 与体系相关的obj文件和静态库文件，arch-obj会在arch/$(ARCH)/Makefile中添加新成员
+arch-obj :=
+arch-lib := $(builddir)/arch.a
+
+subdir 	:= arch/$(ARCH)/
+
+_all: all
+PHONY += _all
+
+
+all: config $(alphaz)
+PHONY += all
 
 buildimg :
-	dd if=$(BUILDDIR)/boot.bin of=a.img bs=512 count=1 conv=notrunc
+	dd if=$(builddir)/boot.bin of=a.img bs=512 count=1 conv=notrunc
 	sudo mount -o loop a.img /mnt/floppy/
-	sudo cp -fv $(BUILDDIR)/loader.bin /mnt/floppy/
-	sudo cp -fv $(BUILDDIR)/kernel.bin /mnt/floppy/
+	sudo cp -fv $(builddir)/loader.bin /mnt/floppy/
+	sudo cp -fv $(builddir)/kernel.bin /mnt/floppy/
 	sudo umount /mnt/floppy
+PHONY += buildimg
 
 image: all buildimg
+PHONY += image
 
 clear:
-	$(MAKE) clear -C $(SUBDIRS)
-	@echo 'delete the objects which in build dir'
-	rm -f $(BUILDDIR)/*
-	@echo 'delete the linked include/asm'
-	rm include/asm
+	rm -f $(builddir)/*
+	test -d include/asm && rm include/asm
+PHONY += clear
 
-$(TARGET): $(SLIBS)
+include arch/$(ARCH)/Makefile
+
+all: $(boot-bin)
+PHONY += all
+
+$(arch-lib) : $(arch-obj)
+	$(AR) $(ARFLAGS) $@ $^
+
+$(alphaz): $(arch-lib)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 debug:
-	@echo $(ROOTDIR)
-	@echo $(SUBDIRS)
+	@echo $(srctree)
+	@echo $(subdir)
+	@echo $(boot-bin)
+	@echo $(arch-obj)
+PHONY += debug
 
 # make之前对项目进行一些配置
 config:
-	ln -fsn $(ROOTDIR)/include/asm-$(ARCH) include/asm
-	@echo	'/include/asm-$(ARCH) had linked to include/asm'
-	test -d $(BUILDDIR) || mkdir -p $(BUILDDIR)
-	$(MAKE) config -C $(SUBDIRS)
+	ln -fsn $(srctree)/include/asm-$(ARCH) include/asm
+	test -d $(builddir) || mkdir -p $(builddir)
 
-
-$(SUBDIRS): ECHO
-	$(MAKE) -C $@
-
-ECHO:
-	@echo =======================$(SUBDIRS)============================
+.PHONY = $(PHONY)
