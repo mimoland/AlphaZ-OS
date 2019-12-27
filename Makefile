@@ -34,7 +34,7 @@ srctree	:= $(CURDIR)
 build	:= build
 target	:= target
 src-all	:=
-libs	:= arch.a
+libs	:= arch.a init.a
 libs 	:= $(addprefix $(build)/, $(libs))
 
 _all: all
@@ -46,6 +46,8 @@ $(target)/kernel.bin: $(libs)
 include arch/$(ARCH)/Makefile
 src-all += $(src-arch)
 
+include init/Makefile
+src-all += $(src-init)
 
 all: config $(target)/kernel.bin $(boot)
 PHONY += all

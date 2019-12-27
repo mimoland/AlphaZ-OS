@@ -1,8 +1,8 @@
 [section .text]
 
-global asm_disp_str
+global disp_str
 
-asm_disp_str:
+disp_str:
 	push	ebp
 	push    esi
 	push    edi
