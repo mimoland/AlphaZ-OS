@@ -93,8 +93,8 @@ debug:
 $(build)/%.d: %.c config
 	@set -e; rm -f $@; \
 	$(CC) -MM $(CFLAGS) $< > $@.$$$$; \
-	sed "s,^,$@ $(dir $@)," $@.$$$$  | \
-	sed "s,$$,\n\t$(CC) $(CFLAGS) -o $(patsubst %.d,%.o,$@) $<," >  $@; \
+	sed '1s,^,$@ $(dir $@),' $@.$$$$  | \
+	sed '$$a \\t$(CC) $(CFLAGS) -o $(patsubst %.d,%.o,$@) $<' >  $@; \
 	rm -f $@.$$$$
 
 -include $(addprefix $(build)/, $(patsubst %.c, %.d, $(filter %.c, $(src-all))))
