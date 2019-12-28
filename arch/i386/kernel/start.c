@@ -3,6 +3,7 @@
 #include <asm/start.h>
 #include <asm/string.h>
 #include <asm/global.h>
+#include <asm/int.h>
 
 void arch_start()
 {
@@ -22,6 +23,8 @@ void arch_start()
     u32* p_idt_base = (u32*)(&idt_ptr[2]);
     *p_idt_limit = IDT_SIZE * sizeof(Gate) - 1;
     *p_idt_base = (u32)&idt;
+
+    init_port();
 
     asm volatile("lgdt %0"::"m"(gdt_ptr));
     asm volatile("lidt %0"::"m"(idt_ptr));
