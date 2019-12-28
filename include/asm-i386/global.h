@@ -5,10 +5,10 @@
 #include <asm/const.h>
 #include <asm/protect.h>
 
-u8 gdt_ptr[6];
-Descriptor gdt[GDT_SIZE];
+extern u8 gdt_ptr[];
+extern Descriptor gdt[];
 
-u8 idt_ptr[6];
-Gate idt[IDT_SIZE];
+extern u8 idt_ptr[];
+extern Gate idt[];
 
 #endif
