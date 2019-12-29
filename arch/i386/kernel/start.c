@@ -10,7 +10,7 @@ void arch_start()
     /* 由于一些不可预知的原因，要对bug.c中的全局变量首先初始化，一般的初始化方法无效 */
     bug_init();
     /* 切换gdt */
-    asm volatile("sgdt %0":"=m"(gdt_ptr)::"memory");
+    asm volatile("sgdt %0"::"m"(gdt_ptr):"memory");
     memcpy(&gdt,(void *)(*((u32*)(&gdt_ptr[2]))),
                                 *((u16*)(&gdt_ptr[0]) + 1));
     u16* p_gdt_limit = (u16*)(&gdt_ptr[0]);

@@ -77,14 +77,16 @@ void exception_handler(int vec_no, int err_code, int eip, int cs, int eflags)
         "#PF Page Fault",
         "--  (Intel reserved. Do not use.)",
         /* 某些不可预见的原因，致使下面的定义会干扰err_msg[vec_no]的访问 */
-        // "#MF x87 FPU Floating-Point Error (Math Fault)",
-        // "#AC Alignment Check",
-        // "#MC Machine Check",
-        // "#XF SIMD Floating-Point Exception"
+        /* 解决方式是开启gcc -O2优化 */
+        "#MF x87 FPU Floating-Point Error (Math Fault)",
+        "#AC Alignment Check",
+        "#MC Machine Check",
+        "#XF SIMD Floating-Point Exception"
     };
 
     disp_str("Exception! --> ");
     disp_int(vec_no);
+    disp_str(" ");
     disp_str(err_msg[vec_no]);
     disp_str("\n");
     disp_str("EFLAGS:");

@@ -5,13 +5,16 @@ ENTRYPOINT = 0x30400
 
 MAKEFLAGS  += -rR --no-print-directory
 
+DEBUG = 1
+
 ASM			= nasm
 DASM		= ndisasm
 CC			= gcc
 LD			= ld
 AR 			= ar
 ASMKFLAGS	= -f elf
-CFLAGS		= -I include/ -c -fno-builtin -fno-common -fno-stack-protector
+CFLAGS		= -I include/ -c -O2 -Wall -fno-builtin -fno-common \
+				-fno-stack-protector
 LDFLAGS		= -s -Ttext $(ENTRYPOINT)
 ARFLAGS		= -rc
 DASMFLAGS	=
@@ -28,6 +31,10 @@ export ARCH
 ifeq ($(ARCH), i386)
 	CFLAGS += -m32
 	LDFLAGS += -m elf_i386
+endif
+
+ifeq ($(DEBUG), 1)
+	CFLAGS += -g
 endif
 
 srctree	:= $(CURDIR)
