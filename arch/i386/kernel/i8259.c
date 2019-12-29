@@ -1,5 +1,6 @@
 /* 初始化8259 */
 #include <asm/io.h>
+#include <asm/bug.h>
 #include <asm/i8259.h>
 
 void init_8259A()
@@ -21,8 +22,15 @@ void init_8259A()
     /* 从片 icw4 */
     outb(INT_S_CTLMASK, 0x1);
     /* 主片 ocw1 */
-    outb(INT_M_CTLMASK, 0xff);
+    outb(INT_M_CTLMASK, 0xfd);
     /* 从片 ocw1 */
     outb(INT_S_CTLMASK, 0xff);
 }
 
+/* 外部中断的统一处理函数 */
+void spurious_irq(int irq)
+{
+    disp_str("spurious_irq: ");
+    disp_int(irq);
+    disp_str("\n");
+}
