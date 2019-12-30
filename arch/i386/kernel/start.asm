@@ -1,5 +1,6 @@
 
 global _start
+extern  kernel_main
 extern	arch_start
 extern	exception_handler
 extern 	spurious_irq
@@ -51,7 +52,7 @@ _start:
 	call	arch_start
 	jmp	0x8:_next			; 0x8为代码段
 _next:
-	sti
+	jmp 	kernel_main
 	hlt
 
 ; 中断和异常 -- 硬件中断

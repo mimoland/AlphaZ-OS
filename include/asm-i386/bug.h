@@ -10,4 +10,6 @@ void disp_str(char *);
 
 void disp_int(int);
 
+void hlt();
+
 #endif

@@ -30,4 +30,27 @@ static inline u8 inb(u16 port)
     return val;
 }
 
+
+static inline u32 readl(u32 addr)
+{
+    u32 d0;
+    asm volatile(
+        "movl (%%esi), %%eax\n\t"
+        :"=&a"(d0)
+        :"S"(addr)
+    );
+    return d0;
+}
+
+static inline u8 readb(u32 addr)
+{
+    u8 d0;
+    asm volatile(
+        "movb (%%esi), %%al\n\t"
+        :"=&a"(d0)
+        :"S"(addr)
+    );
+    return d0;
+}
+
 #endif

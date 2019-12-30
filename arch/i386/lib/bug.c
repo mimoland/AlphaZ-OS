@@ -54,3 +54,9 @@ void disp_int(int num)
     itoa(num, buf);
     disp_str(buf);
 }
+
+
+inline void hlt()
+{
+    asm volatile("hlt");
+}

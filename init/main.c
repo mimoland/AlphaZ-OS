@@ -3,9 +3,13 @@
  */
 
 #include <asm/start.h>
+#include <asm/bug.h>
+#include <alphaz/mm.h>
 
 int kernel_main()
 {
-    arch_start();
+    disp_str("Kernel Main\n");
+    mm_init();
+    hlt();
     return 0;
 }

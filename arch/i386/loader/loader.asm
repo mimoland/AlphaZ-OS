@@ -17,6 +17,8 @@ BaseOfKernelPhyAddr	equ	BaseOfKernel*10h 	; kernel的物理地址
 BaseOfPageDir		equ	100000h			; 页目录基址
 BaseOfPageTable		equ	101000h			; 页表基址
 
+MemInfoAddr		equ	600h			; 线性地址
+
 [bits 16]
 	jmp	short _start
 	nop
@@ -374,6 +376,11 @@ protect_mode:
 
 		; 开启内存分页
 		call	setup_mem_page
+		; 将内存的大小写入0x600处供内核内存管理使用
+		mov	byte [MemInfoAddr], 0xff	; 标示
+		mov	eax, [MemSize]
+		mov	dword [MemInfoAddr + 2], eax
+		; 显示信息
 		mov	ecx, SetupedPageMessage
 		call	disp_str
 
