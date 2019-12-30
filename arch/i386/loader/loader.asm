@@ -378,7 +378,7 @@ protect_mode:
 		call	setup_mem_page
 		; 将内存的大小写入0x600处供内核内存管理使用
 		mov	byte [MemInfoAddr], 0xff	; 标示
-		mov	eax, [MemSize]
+		mov	eax, [MemSizeProtMode]
 		mov	dword [MemInfoAddr + 2], eax
 		; 显示信息
 		mov	ecx, SetupedPageMessage
@@ -423,7 +423,7 @@ setup_mem_page:
 	pushad
 	; 首先计算需要多少页表和页目录项
 	xor	edx, edx
-	mov	eax, [MemSize]
+	mov	eax, [MemSizeProtMode]
 	mov	ebx, 0x400000			; 4M, 一个页表对应的内存大小
 	div	ebx
 	mov	ecx, eax
@@ -532,3 +532,4 @@ SetupedPageMessage	equ	_SetupedPageMessage + BaseOfLoaderPhyAddr
 BottmOfStack:   times	1024	db	0				; 1k栈空间
 TopOfStack 		equ	$					; 实模式的栈顶
 TopOfStackProtMode	equ	BaseOfLoaderPhyAddr + TopOfStack 	; 保护模式的栈顶
+MemSizeProtMode		equ 	BaseOfLoaderPhyAddr + MemSize		; 保护模式下内存容量所在地址
