@@ -15,8 +15,8 @@ subarch := arch/$(ARCH)
 
 # 每当有新文件的加入，都要都需要将其相对于该Makefile的路径加入到该变量，该变量会在顶层
 # Makefile中被引用
-src-arch += kernel/start.c kernel/start.asm	kernel/i8259.c kernel/int.c \
-		kernel/global.c lib/bug.c
+src-arch += kernel/start.c kernel/kernel.asm kernel/i8259.c kernel/protect.c \
+		kernel/global.c kernel/process.c lib/bug.c
 
 src-arch := $(addprefix $(subarch)/, $(src-arch))
 

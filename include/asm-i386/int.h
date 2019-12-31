@@ -1,7 +1,7 @@
 #ifndef _ASM_INT_H_
 #define _ASM_INT_H_
 
-void init_port();
+void init_prot();
 
 typedef void (*init_handler) ();
 

@@ -7,6 +7,9 @@
 /* gdt大小 */
 #define GDT_SIZE   128
 
+/* idt大小 */
+#define LDT_SIZE   32
+
 /* idt大小*/
 #define IDT_SIZE   256
 

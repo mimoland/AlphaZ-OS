@@ -22,7 +22,7 @@ void init_8259A()
     /* 从片 icw4 */
     outb(INT_S_CTLMASK, 0x1);
     /* 主片 ocw1 */
-    outb(INT_M_CTLMASK, 0xfd);
+    outb(INT_M_CTLMASK, 0xfe);
     /* 从片 ocw1 */
     outb(INT_S_CTLMASK, 0xff);
 }

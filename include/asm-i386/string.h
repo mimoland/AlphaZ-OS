@@ -3,7 +3,7 @@
 
 #include <alphaz/type.h>
 
-void memcpy(void *to, void *from, size_t n)
+static void memcpy(void *to, void *from, size_t n)
 {
     u32 d0, d1, d2;
     asm volatile(

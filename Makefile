@@ -41,14 +41,14 @@ srctree	:= $(CURDIR)
 build	:= build
 target	:= target
 src-all	:=
-libs	:= arch.a init.a
+libs	:= arch.a init.a arch.a
 libs 	:= $(addprefix $(build)/, $(libs))
 
 _all: all
 
 
 $(target)/kernel.bin: $(libs)
-	$(LD) $(LDFLAGS) -o $@ $^
+	$(LD) $(LDFLAGS) -o $@ $+
 
 include arch/$(ARCH)/Makefile
 src-all += $(src-arch)

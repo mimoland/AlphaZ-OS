@@ -24,7 +24,7 @@ void arch_start()
     *p_idt_limit = IDT_SIZE * sizeof(Gate) - 1;
     *p_idt_base = (u32)&idt;
 
-    init_port();
+    init_prot();
 
     asm volatile("lgdt %0"::"m"(gdt_ptr));
     asm volatile("lidt %0"::"m"(idt_ptr));

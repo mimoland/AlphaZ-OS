@@ -54,3 +54,27 @@ void disp_int(int num)
     itoa(num, buf);
     disp_str(buf);
 }
+
+/* 延时 */
+inline void delay(int t)
+{
+    volatile int i, j, k;
+    for (i = 0; i < t; i++) {
+        for (j = 0; j < 1000; j++) {
+            for(k = 0; k < 1000; k++) {
+                ;
+            }
+        }
+    }
+}
+
+void TestA()
+{
+    int i = 0;
+    while (1) {
+        disp_str("A");
+        disp_int(i++);
+        disp_str(".");
+        delay(1);
+    }
+}
