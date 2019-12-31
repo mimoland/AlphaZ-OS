@@ -11,9 +11,10 @@
 
 typedef struct s_page
 {
-    unsigned int flags;
+    unsigned long flags;
     unsigned short  count;      /* 该页的引用数 */
     unsigned int fpn;           /* 页号 */
+    void *virtual;              /* 映射的内核虚拟内存地址 */
 } Page;
 
 extern Page *mem_map;
@@ -25,6 +26,7 @@ void mm_init();
 /* Page中flags的一些属性 */
 #define PAGE_END    ((unsigned int)1 << 31)         /* Page数组是/否结束 */
 #define PAGE_KEEP   1                               /* 是否是保留地址   */
+#define PAGE_NEXT   2                               /* 是否和下一个页是一个整体 */
 
 /* 不同功能的内存范围 */
 /* 保留内存范围，动态分配和用户进程不得使用 */
