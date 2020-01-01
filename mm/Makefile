@@ -1,11 +1,12 @@
-submm := mm
 
 
-# 每当有新文件的加入，都要都需要将其相对于该Makefile的路径加入到该变量，该变量会在顶层
-# Makefile中被引用
-src-mm += mm_init.c malloc.c
+# 当前Makefile相对于项目根目录的路径，子Makefile共用，注意被覆盖
+reldir := mm
+# 每当有新的目录加入时，需要修改该变量，子目录共用此变量，注意可能被覆盖
+subdir := .
+subdir := $(addprefix $(reldir)/, $(subdir))
 
-src-mm := $(addprefix $(submm)/, $(src-mm))
+src-mm += $(foreach dir, $(subdir), $(wildcard $(dir)/*.*))
 
 
 obj-mm := $(patsubst %.c, %.o, $(src-mm))

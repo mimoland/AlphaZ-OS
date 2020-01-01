@@ -10,26 +10,24 @@
 
 ASMBFLAGS += -I arch/i386/include/
 
-subarch := arch/$(ARCH)
+# 当前Makefile相对于项目根目录的路径，子Makefile共用，注意被覆盖
+reldir := arch/$(ARCH)
+# 每当有新的目录加入时，需要修改该变量，子目录共用此变量，注意可能被覆盖
+subdir := lib kernel
+subdir := $(addprefix $(reldir)/, $(subdir))
 
-
-# 每当有新文件的加入，都要都需要将其相对于该Makefile的路径加入到该变量，该变量会在顶层
-# Makefile中被引用
-src-arch += kernel/start.c kernel/kernel.asm kernel/i8259.c kernel/protect.c \
-		kernel/global.c kernel/process.c lib/bug.c
-
-src-arch := $(addprefix $(subarch)/, $(src-arch))
+src-arch += $(foreach dir, $(subdir), $(wildcard $(dir)/*.*))
 
 
 # boot.bin和loader.bin比较简单，不使用通用规则，单独编译到target文件夹。boot变量会在顶层
 # Makefile中被引用
 boot = $(target)/boot.bin $(target)/loader.bin
 
-$(target)/boot.bin: $(subarch)/boot/boot.asm $(subarch)/include/fat12header.inc
+$(target)/boot.bin: $(reldir)/boot/boot.asm $(reldir)/include/fat12header.inc
 	$(ASM) $(ASMBFLAGS) -o $@ $<
 
-$(target)/loader.bin: $(subarch)/loader/loader.asm \
-						$(subarch)/include/fat12header.inc
+$(target)/loader.bin: $(reldir)/boot/loader.asm \
+						$(reldir)/include/fat12header.inc
 	$(ASM) $(ASMBFLAGS) -o $@ $<
 
 

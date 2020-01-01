@@ -41,7 +41,7 @@ srctree	:= $(CURDIR)
 build	:= build
 target	:= target
 src-all	:=
-libs	:= arch.a init.a arch.a
+libs	:= arch.a init.a mm.a arch.a
 libs 	:= $(addprefix $(build)/, $(libs))
 
 _all: all
@@ -75,12 +75,11 @@ PHONY += image
 
 # 编译前对整个项目的配置。包括相关目录的生成以及创建目录链接等工作。所有子目录的Makefile的导入
 # 工作必须在此前完成。
-src-dir := $(dir $(src-all))
 
-config:
+config: $(dir $(src-all))
 	@ln -fsn $(srctree)/include/asm-$(ARCH) include/asm
 	@test -d $(target) || mkdir -p $(target)
-	@for i in $(src-dir); \
+	@for i in $^; \
 	do \
 		test -d $(build)/$$i || mkdir -p $(build)/$$i; \
 	done
@@ -95,8 +94,8 @@ PHONY += clean
 
 
 debug:
-	@echo $(obj-arch)
-
+	@echo $(src-all)
+PHONY += debug
 
 # 下面定义一些通用的规则，为每个.o文件生成相应的源文件和头文件依赖。生成前必须要先对项目进行基
 # 本的配置，保证文件创建的路径正确，所以依赖config。然后将生成的依赖进行导入
