@@ -5,6 +5,8 @@ typedef unsigned char   u8;
 typedef unsigned short  u16;
 typedef unsigned int    u32;
 
-typedef unsigned        size_t;
+typedef unsigned int    size_t;
+
+#define NULL 0
 
 #endif

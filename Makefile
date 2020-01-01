@@ -56,6 +56,9 @@ src-all += $(src-arch)
 include init/Makefile
 src-all += $(src-init)
 
+include mm/Makefile
+src-all += $(src-mm)
+
 all: config $(target)/kernel.bin $(boot)
 PHONY += all
 

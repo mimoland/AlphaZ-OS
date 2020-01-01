@@ -77,4 +77,8 @@ void TestA()
         disp_str(".");
         delay(1);
     }
+
+inline void hlt()
+{
+    asm volatile("hlt");
 }
