@@ -15,5 +15,6 @@ void delay(int);
 /* 用于测试的进程调度的函数 */
 void TestA();
 void hlt();
+void TestB();
 
 #endif

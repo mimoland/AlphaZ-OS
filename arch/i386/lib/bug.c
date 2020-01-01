@@ -75,10 +75,23 @@ void TestA()
         disp_str("A");
         disp_int(i++);
         disp_str(".");
-        delay(1);
+        delay(10);
     }
+}
 
 inline void hlt()
 {
     asm volatile("hlt");
 }
+
+void TestB()
+{
+    int i = 0;
+    while (1) {
+        disp_str("B");
+        disp_int(i++);
+        disp_str(".");
+        delay(10);
+    }
+}
+

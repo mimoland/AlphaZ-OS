@@ -18,4 +18,6 @@ extern u8 task_stack[];
 extern Tss tss;
 extern Process* p_proc_ready;
 
+extern Task task_table[];
+
 #endif

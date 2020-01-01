@@ -1,4 +1,5 @@
 #include <alphaz/type.h>
+#include <asm/bug.h>
 #include <asm/global.h>
 #include <asm/const.h>
 #include <asm/protect.h>
@@ -15,3 +16,5 @@ u8 task_stack[STACK_SIZE_TOTAL];
 
 Tss tss;
 Process *p_proc_ready;
+
+Task task_table[NR_TASKS];

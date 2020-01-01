@@ -4,6 +4,9 @@ extern  kernel_main
 extern	arch_start
 extern	exception_handler
 extern 	spurious_irq
+extern	disp_str
+extern	delay
+extern  switch_task
 
 ; 导出中断处理函数
 global	divide_error
@@ -76,9 +79,52 @@ _next:
         hlt
 %endmacro
 
+hwint00_count		db 	0
+
 align   16
 hwint00:                ; Interrupt routine for irq 0 (the clock).
-	iret
+	sub	esp, 4
+	pushad
+	push	ds
+	push	es
+	push	fs
+	push	gs
+	mov	dx, ss
+	mov	ds, dx
+	mov	es, dx
+
+	; 8259a复位
+	mov	al, 0x20
+	out	0x20, al
+
+	; 检查计数器是否为0，据此判断中断重入
+	cmp	byte [hwint00_count], 0
+	jnz	_end
+	inc	byte [hwint00_count]
+
+	mov	esp, stack_top		; 切换内核栈
+
+	sti				; 开中断
+
+	call 	switch_task
+	inc 	byte [gs:0]
+
+	cli
+
+	mov	esp, [p_proc_ready]	; 离开内核栈
+	lldt	[esp + P_LDT_SEL]
+	lea	eax, [esp + P_STACKTOP]
+	mov	dword [tss + TSS3_S_SP0], eax
+
+	dec	byte [hwint00_count]
+_end:
+	pop 	gs
+	pop		fs
+	pop		es
+	pop		ds
+	popad
+	add	esp, 4
+	iretd
 
 align   16
 hwint01:                ; Interrupt routine for irq 1 (keyboard)

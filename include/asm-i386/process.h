@@ -7,15 +7,18 @@
 
 void init_process();
 
+/* 用于进程切换 */
+void switch_task();
+
 extern void restart();
 
 /* Number of tasks */
-#define NR_TASKS	1
+#define NR_TASKS	2
 
 /* stacks of tasks */
 #define STACK_SIZE_TESTA	0x8000
-
-#define STACK_SIZE_TOTAL	STACK_SIZE_TESTA
+#define STACK_SIZE_TESTB    0x8000
+#define STACK_SIZE_TOTAL	(STACK_SIZE_TESTA + STACK_SIZE_TESTB)
 
 /* 进程退出时用于保存寄存器的状态 */
 typedef struct s_stackframe {
@@ -48,5 +51,14 @@ typedef struct s_proc {
 	u32 pid;
 	char p_name[16];
 }Process;
+
+typedef void (*task_f) ();
+
+typedef struct  {
+    task_f initial_eip;
+    int    stacksize;
+    char   name[32];
+}Task;
+
 
 #endif
