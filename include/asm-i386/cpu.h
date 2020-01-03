@@ -106,6 +106,13 @@ extern struct tss_struct tss;
 
 void cpu_init(void);
 
+/* cpu特权级 */
+
+#define RING0   0
+#define RING1   1
+#define RING2   2
+#define RING3   3
+
 
 /* gdt描述符选择子 */
 #define	SELECTOR_DUMMY		   0            /* 空描述符 */
