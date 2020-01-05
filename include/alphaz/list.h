@@ -65,7 +65,7 @@ static inline void list_head_init(struct list_head *head)
  */
 static inline int list_is_null(struct list_head *head)
 {
-    return (head->next == head | head->prev == head);
+    return (head->next == head || head->prev == head);
 }
 
 
