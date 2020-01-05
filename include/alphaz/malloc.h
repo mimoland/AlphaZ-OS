@@ -3,6 +3,8 @@
 
 #include <alphaz/type.h>
 
+void *alloc_page(unsigned long, size_t);
+
 void * malloc(size_t);
 
 void free(void *);

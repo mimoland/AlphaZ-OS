@@ -25,7 +25,11 @@ static void * next_virtual_addr(void **addr)
     return res;
 }
 
-/* 设置mem_map */
+
+/**
+ * setup_mem_map - 设置mem_map
+ * @size: 物理内存的总大小
+ */
 static void setup_mem_map(unsigned size)
 {
     int fpn;

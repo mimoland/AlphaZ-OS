@@ -1,8 +1,14 @@
 #include <alphaz/mm.h>
 #include <alphaz/type.h>
 
-/* 分配n个页，返回首地址 */
-static void *alloc_page(unsigned long flags_mask, size_t size)
+/**
+ * alloc_page - 分配连续的物理页，返回物理地址
+ * @flags_mask: 页属性
+ * @size: 分配的页的数量
+ *
+ * 若最后未能找到空的物理内存，返回NULL
+ */
+void *alloc_page(unsigned long flags_mask, size_t size)
 {
     int offset;
     Page *p_page = mem_map;
@@ -35,11 +41,13 @@ static void *alloc_page(unsigned long flags_mask, size_t size)
     return p_page->virtual;
 }
 
+
 /* 通过内核地址得到页号 */
 static inline unsigned short get_fpn(void *ptr)
 {
     return (((int)ptr) / PRE_PAGE_SIZE);
 }
+
 
 /* 回收页 */
 static void free_page(unsigned short fpn)
@@ -56,6 +64,13 @@ static void free_page(unsigned short fpn)
     }
 }
 
+
+/**
+ * malloc - 分配物理内存，返回物理地址
+ * @size: 要分配的内存空间的大小，字节位单位
+ *
+ * 该函数当前仅处于试验阶段，分配内存时以页位最小单位，所以内存浪费较大
+ */
 void * malloc(size_t size)
 {
     size_t page_s;                      /* 需要的页数 */
@@ -68,6 +83,13 @@ void * malloc(size_t size)
     return ptr;
 }
 
+
+/**
+ * free - 回收内存
+ * @ptr: 指向要回收内存首部的指针
+ *
+ * 该函数当前仅处于试验阶段，不能保证正确回收
+ */
 void free(void *ptr)
 {
     unsigned short fpn = get_fpn(ptr);
