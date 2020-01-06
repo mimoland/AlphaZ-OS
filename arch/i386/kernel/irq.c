@@ -88,7 +88,6 @@ void irq_init(void)
     setup_exception_desc();
     setup_hwint_desc();
     setup_idtr();
-    sti();
 }
 
 
