@@ -37,4 +37,24 @@ static inline void * memset(void *from, u8 value, size_t n)
     return from;
 }
 
+
+#define __HAVE_ARCH_STRCPY
+static inline void * strcpy(char *dest, const char *src)
+{
+    u32 d0, d1;
+    asm volatile(
+        "1:"
+        "movb (%%esi), %%al\n\t"
+        "movb %%al, (%%edi)\n\t"
+        "inc %%esi\n\t"
+        "inc %%edi\n\t"
+        "cmp %%al, 0\n\t"
+        "jnz 1b\n\t"
+        : "=&D"(d0), "=&S"(d1)
+        : "0"((u32)dest), "1"((u32)src)
+        : "%eax", "memory");
+
+    return dest;
+}
+
 #endif

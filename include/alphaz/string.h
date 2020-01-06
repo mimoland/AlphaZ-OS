@@ -11,4 +11,8 @@ extern void * memcpy(void *, void *, size_t);
 extern void * memset(void *, u8, size_t);
 #endif
 
+#ifndef __HAVE_ARCH_STRCPY
+extern void * strcpy(char *dest, const char *src);
+#endif
+
 #endif

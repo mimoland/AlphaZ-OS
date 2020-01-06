@@ -18,6 +18,13 @@ int kernel_main()
     irq_init();
     disp_str("kernel_main\n");
     mm_init();
+
+    /**
+     * 任务初始化完成后进入init进程，该方法不再返回，即调用该方法后下面的东西都不会执行
+     * 所以该方法必须放在最后调用
+     */
+    task_init();
+
     hlt();
     return 0;
 }

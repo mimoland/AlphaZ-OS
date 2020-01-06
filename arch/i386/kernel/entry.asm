@@ -184,3 +184,18 @@ exception:
 	call	exception_handler
 	add	esp, 4*2	; 让栈顶指向 EIP，堆栈中从顶向下依次是：EIP、CS、EFLAGS
 	hlt
+
+
+ENTRY __switch_to_first_task
+	mov 	eax, [esp + 4]
+	mov	esp, eax
+
+	pop	gs
+	pop	fs
+	pop	es
+	pop	ds
+	popad
+
+	add	esp, 4  ; 跳过retaddr
+
+	iretd		; ring0 -> ring1, 进入TestA
