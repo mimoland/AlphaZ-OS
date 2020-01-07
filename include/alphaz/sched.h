@@ -3,9 +3,14 @@
 
 #include <alphaz/type.h>
 #include <alphaz/list.h>
+#include <alphaz/string.h>
+
+#include <asm/sched.h>
 #include <asm/cpu.h>
 
 void task_init(void);
+
+u32 schedule(void);
 
 /* 进程链表头 */
 extern struct list_head task_head;

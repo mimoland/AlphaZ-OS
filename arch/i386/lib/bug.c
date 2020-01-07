@@ -56,7 +56,7 @@ void disp_int(int num)
 }
 
 /* 延时 */
-inline void delay(int t)
+void __noinline delay(int t)
 {
     volatile int i, j, k;
     for (i = 0; i < t; i++) {

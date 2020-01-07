@@ -1,6 +1,8 @@
 #ifndef _ASM_BUG_H_
 #define _ASM_BUG_H_
 
+#include <alphaz/compiler.h>
+
 /* 屏幕显示位置 defined in bug.c */
 extern int disp_pos;
 

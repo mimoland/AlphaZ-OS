@@ -8,6 +8,25 @@ align  16
 %endmacro
 
 
+%macro SAVE_ALL 0
+	sub	esp, 4
+	pushad
+	push	ds
+	push	es
+	push	fs
+	push	gs
+%endmacro
+
+%macro POP_AND_RET  0
+	pop	gs
+	pop	fs
+	pop	es
+	pop	ds
+	popad
+	add	esp, 4
+	iretd
+%endmacro
+
 extern spurious_irq
 ; 硬件中断的定义
 %macro  hwint_master    1
@@ -24,8 +43,29 @@ extern spurious_irq
         hlt
 %endmacro
 
+_count:	db 0
+
+extern __schedule
 ENTRY hwint00
-        hwint_master    0
+        SAVE_ALL
+	mov	al, 0x20
+	out	0x20, al
+
+	cmp	byte [_count], 0
+	jnz	_hwint00_end
+	inc 	byte [_count]
+	sti
+	inc	byte [gs:0]
+
+	call	__schedule
+	cli
+	dec	byte [_count]
+	test	eax, eax
+	jz	_hwint00_end
+	mov	esp, eax
+_hwint00_end:
+	POP_AND_RET
+
 
 ; Interrupt routine for irq 1 (keyboard)
 ENTRY hwint01
@@ -190,12 +230,4 @@ ENTRY __switch_to_first_task
 	mov 	eax, [esp + 4]
 	mov	esp, eax
 
-	pop	gs
-	pop	fs
-	pop	es
-	pop	ds
-	popad
-
-	add	esp, 4  ; 跳过retaddr
-
-	iretd		; ring0 -> ring1, 进入TestA
+	POP_AND_RET

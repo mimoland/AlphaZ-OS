@@ -11,15 +11,57 @@
 #include <asm/cpu.h>
 #include <asm/bug.h>
 
-void schedule(void)
-{
-
-}
 
 /**
  * 任务链表的头结点
  */
 struct list_head task_head;
+
+
+/**
+ * 获取当前进程的进程控制块指针
+ */
+static inline struct task_struct * current()
+{
+    return __current();
+}
+
+
+static inline struct thread_struct * get_thread_info(struct task_struct *task)
+{
+    struct thread_struct *thread;
+    thread = (struct thread_struct *)kernel_stack_top(task);
+    thread = thread - 1;
+    return thread;
+}
+
+
+static inline void copy_thread(struct thread_struct *dest,
+                                struct thread_struct *src)
+{
+    memcpy(dest, src, sizeof(struct thread_struct));
+}
+
+u32 schedule(void)
+{
+    struct thread_struct *thread;
+    struct task_struct *curr;
+
+    curr = list_first_entry(&task_head, struct task_struct, task);
+
+    thread = get_thread_info(curr);
+
+    copy_thread(&curr->thread, thread);
+    list_del(&curr->task);
+    list_add_tail(&curr->task, &task_head);
+
+    /* 切换到下一个进程 */
+    curr = list_first_entry(&task_head, struct task_struct, task);
+    tss.esp0 = (u32)kernel_stack_top(curr);
+
+    return (u32)(&curr->thread);
+}
+
 
 /**
  * 初始化任务链表的头结点
@@ -33,7 +75,7 @@ static void init_task_head(void)
 /**
  * 创建init进程
  */
-static void setup_init_process()
+static void setup_init_process(void)
 {
     /* 其中包括内核栈 */
     struct task_struct *ts = (struct task_struct *)alloc_page(0, 1);
@@ -53,16 +95,32 @@ static void setup_init_process()
      */
     ts->thread.eip = (u32)TestA;
 
-
-    tss.ss0 = (u32)kernel_stack_top(ts);
-
     /* 将当前进程加入进程表 */
     list_add(&ts->task, &task_head);
+
+    tss.esp0 = (u32)kernel_stack_top(ts);
+
     /**
      * __switch_to_first_task中会切换堆栈，至此不在使用kernel.asm中定义的临时栈
      * 当进程进入内核态时，内核使用分配给进程的内核栈，用户态时，进程使用分给进程的用户栈
      */
     __switch_to_first_task((u32)(&ts->thread));
+}
+
+
+static void setup_test_process(void)
+{
+    /* 其中包括内核栈 */
+    struct task_struct *ts = (struct task_struct *)alloc_page(0, 1);
+
+    ts->pid = 2;
+    ts->stack = alloc_page(0, 1);
+    ts->count = 0;
+    strcpy(ts->comm, "TestB");
+
+    setup_thread(&ts->thread, (u32)TestB, (u32)user_stack_top(ts), 0x1202);
+    ts->thread.eip = (u32)TestB;
+    list_add(&ts->task, &task_head);
 }
 
 
@@ -75,5 +133,6 @@ void task_init(void)
 {
     init_task_head();
     /**/
+    setup_test_process();
     setup_init_process();
 }
