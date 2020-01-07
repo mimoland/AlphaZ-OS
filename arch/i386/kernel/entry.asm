@@ -27,6 +27,31 @@ align  16
 	iretd
 %endmacro
 
+
+; 关闭8259主片相关引脚
+%macro CLOSE_CHIP_M 1
+	in 	al, 0x21
+	or 	al, (1 << %1)
+	out 	0x21, al
+%endmacro
+
+
+; 关闭8259从片相关引脚
+%macro OPEN_CHIP_M 1
+	in 	al, 0x21
+	and 	al, ~(1 << %1)
+	out 	0x21, al
+%endmacro
+
+
+; 8259复位
+%macro RESET_CHIP 0
+	mov	al, 0x20
+	out	0x20, al
+	out	0xa0, al
+%endmacro
+
+
 extern spurious_irq
 ; 硬件中断的定义
 %macro  hwint_master    1
@@ -43,31 +68,25 @@ extern spurious_irq
         hlt
 %endmacro
 
-_count:	db 0
 
 extern __schedule
 ENTRY hwint00
         SAVE_ALL
-	mov	al, 0x20
-	out	0x20, al
-
-	cmp	byte [_count], 0
-	jnz	_hwint00_end
-	inc 	byte [_count]
+	CLOSE_CHIP_M 0
+	RESET_CHIP
 	sti
-	inc	byte [gs:0]
 
 	call	__schedule
-	cli
-	dec	byte [_count]
 	test	eax, eax
-	jz	_hwint00_end
-	mov	esp, eax
-_hwint00_end:
+	jz	_no_turn_stack
+	mov	esp, eax		; 切换栈
+_no_turn_stack:
+	cli
+	OPEN_CHIP_M 0
 	POP_AND_RET
 
 
-; Interrupt routine for irq 1 (keyboard)
+; Interrupt routhwint_masterine for irq 1 (keyboard)
 ENTRY hwint01
         hwint_master    1
 
