@@ -4,6 +4,7 @@
 
 #include <alphaz/sched.h>
 #include <alphaz/mm.h>
+#include <alphaz/syscall.h>
 
 #include <asm/start.h>
 #include <asm/bug.h>
@@ -16,6 +17,7 @@ int kernel_main()
     bug_init();
     cpu_init();
     irq_init();
+    syscall_init();
     disp_str("kernel_main\n");
     mm_init();
 

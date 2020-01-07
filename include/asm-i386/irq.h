@@ -102,4 +102,10 @@ extern void hwint13();
 extern void hwint14();
 extern void hwint15();
 
+
+/* 系统调用号 */
+#define INT_VECTOR_SYSCALL          0x80
+/* defined in entry.asm */
+extern void sys_call();
+
 #endif

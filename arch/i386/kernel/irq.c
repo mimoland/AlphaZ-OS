@@ -74,6 +74,13 @@ static inline void setup_hwint_desc(void)
     init_idt_desc(INT_VECTOR_IRQ8 + 7, DA_386IGate, hwint15, RING0);
 }
 
+
+static inline void setup_syscall_desc(void)
+{
+    init_idt_desc(INT_VECTOR_SYSCALL, DA_386IGate, sys_call, RING3);
+}
+
+
 static inline void setup_idtr(void)
 {
     static struct idtr_struct idtr;
@@ -82,11 +89,13 @@ static inline void setup_idtr(void)
     asm volatile("lidt %0"::"m"(idtr));
 }
 
+
 void irq_init(void)
 {
     init_8259A();
     setup_exception_desc();
     setup_hwint_desc();
+    setup_syscall_desc();
     setup_idtr();
 }
 

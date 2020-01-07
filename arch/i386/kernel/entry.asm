@@ -250,3 +250,16 @@ ENTRY __switch_to_first_task
 	mov	esp, eax
 
 	POP_AND_RET
+
+; 系统调用入口 int 0x80
+; eax中为功能号
+extern syscall_table
+extern __syscall
+ENTRY sys_call
+	SAVE_ALL
+	sti
+
+	call	[syscall_table + eax*4]
+
+	cli
+	POP_AND_RET
