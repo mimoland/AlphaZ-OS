@@ -6,7 +6,6 @@
 #include <alphaz/mm.h>
 #include <alphaz/syscall.h>
 
-#include <asm/start.h>
 #include <asm/bug.h>
 #include <asm/cpu.h>
 #include <asm/irq.h>
