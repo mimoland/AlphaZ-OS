@@ -1,4 +1,5 @@
 #include <alphaz/syscall.h>
+#include <alphaz/sched.h>
 #include <asm/bug.h>
 
 syscall syscall_table[SYS_CALL_SIZE];
@@ -6,7 +7,14 @@ syscall syscall_table[SYS_CALL_SIZE];
 
 void sys_get_ticks(void)
 {
-    disp_str("+");
+    struct syscall_args_struct args;
+    struct task_struct * task = current();
+    struct thread_struct * thread = get_thread_info(task);
+    get_syscall_args(&args, thread);
+
+    args.arg0 = ticks;
+
+    set_syscall_args(&args, thread);
 }
 
 

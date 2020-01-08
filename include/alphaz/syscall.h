@@ -3,6 +3,20 @@
 
 #include <asm/syscall.h>
 
+#ifndef __SYSCALL_ARGS_STRUCT
+#define __SYSCALL_ARGS_STRUCT
+struct syscall_args_struct
+{
+    unsigned long arg0;     /* 系统调用号，或第一个返回的参数 */
+    unsigned long arg1;     /* 第一个参数，或第二个返回的参数 */
+    unsigned long arg2;
+    unsigned long arg3;
+    unsigned long arg4;
+    unsigned long arg5;
+};
+#endif
+
+
 void syscall_init(void);
 
 typedef void (*syscall) ();
@@ -25,7 +39,7 @@ void sys_syscall_test(void);
  * 系统调用接口
  */
 
-extern void get_ticks(void);
+extern unsigned int get_ticks(void);
 extern void syscall_test(void);
 
 

@@ -73,9 +73,8 @@ void TestA()
 {
     int i = 0;
     while (1) {
-        get_ticks();
         disp_str("A");
-        disp_int(i++);
+        disp_int(get_ticks());
         disp_str(".");
         delay(10);
     }
@@ -92,7 +91,6 @@ void TestB()
     while (1) {
         syscall_test();
         disp_str("B");
-        disp_int(i++);
         disp_str(".");
         delay(10);
     }

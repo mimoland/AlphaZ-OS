@@ -17,17 +17,24 @@
  */
 struct list_head task_head;
 
+/**
+ * 时钟中断计数器
+ */
+unsigned long ticks;
 
 /**
  * 获取当前进程的进程控制块指针
  */
-static inline struct task_struct * current()
+struct task_struct * current(void)
 {
     return __current();
 }
 
 
-static inline struct thread_struct * get_thread_info(struct task_struct *task)
+/**
+ * 获取当前进程的cpu上下文
+ */
+struct thread_struct * get_thread_info(struct task_struct *task)
 {
     struct thread_struct *thread;
     thread = (struct thread_struct *)kernel_stack_top(task);
@@ -36,7 +43,7 @@ static inline struct thread_struct * get_thread_info(struct task_struct *task)
 }
 
 
-static inline void copy_thread(struct thread_struct *dest,
+void copy_thread(struct thread_struct *dest,
                                 struct thread_struct *src)
 {
     memcpy(dest, src, sizeof(struct thread_struct));
@@ -46,6 +53,8 @@ u32 schedule(void)
 {
     struct thread_struct *thread;
     struct task_struct *curr;
+
+    ticks++;    /* 每执行一次调度程序，时钟中断计数器加一 */
 
     curr = list_first_entry(&task_head, struct task_struct, task);
 
@@ -60,6 +69,15 @@ u32 schedule(void)
     tss.esp0 = (u32)kernel_stack_top(curr);
 
     return (u32)(&curr->thread);
+}
+
+
+/**
+ * 初始化时钟中断计数器
+ */
+static inline void init_ticks(void)
+{
+    ticks = 0;
 }
 
 
@@ -131,6 +149,7 @@ static void setup_test_process(void)
  */
 void task_init(void)
 {
+    init_ticks();
     init_task_head();
     /**/
     setup_test_process();
