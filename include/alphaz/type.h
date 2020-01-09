@@ -12,6 +12,8 @@ typedef unsigned long   size_t;
 
 typedef unsigned short  pid_t;
 
-#define NULL 0
+#define NULL            0
+#define INT_MAX         2147483647
+#define INT_MIN         (-INT_MAX - 1)
 
 #endif
