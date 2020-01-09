@@ -15,4 +15,8 @@ extern void * memset(void *, u8, size_t);
 extern void * strcpy(char *dest, const char *src);
 #endif
 
+#ifndef __HAVE_ARCH_STRLEN
+extern size_t strlen(const char *s);
+#endif
+
 #endif

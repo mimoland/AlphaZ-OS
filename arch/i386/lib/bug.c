@@ -1,6 +1,7 @@
+#include <alphaz/type.h>
+#include <alphaz/stdio.h>
 #include <asm/bug.h>
 #include <asm/syscall.h>
-#include <alphaz/type.h>
 
 int disp_pos = 0;
 
@@ -73,9 +74,8 @@ void TestA()
 {
     int i = 0;
     while (1) {
-        disp_str("A");
-        disp_int(get_ticks());
-        disp_str(".");
+        i++;
+        printf("Process A: i-%d  ticks: %x\n", i, get_ticks());
         delay(10);
     }
 }
@@ -89,9 +89,9 @@ void TestB()
 {
     int i = 0;
     while (1) {
-        syscall_test();
-        disp_str("B");
-        disp_str(".");
+        // syscall_test();
+        printf("Process B: i-%d\n", i);
+        i++;
         delay(10);
     }
 }

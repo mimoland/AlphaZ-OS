@@ -57,4 +57,23 @@ static inline void * strcpy(char *dest, const char *src)
     return dest;
 }
 
+
+#define __HAVE_ARCH_STRLEN
+static inline size_t strlen(const char *s)
+{
+    int d0, d1;
+    asm volatile(
+		"xor %%ecx, %%ecx\n\t"
+		"1:\tcmpb $0, (%%esi)\n\t"
+        "jz 2f\n\t"
+        "inc %%ecx\n\t"
+        "inc %%esi\n\t"
+        "jmp 1b\n\t"
+        "2:"
+        :"=c"(d0), "=&S"(d1)
+        :"1"((unsigned long)s));
+    return (size_t)d0;
+}
+
+
 #endif

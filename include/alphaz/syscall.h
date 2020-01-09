@@ -1,7 +1,13 @@
 #ifndef _ALPHAZ_SYSCALL_H_
 #define _ALPHAZ_SYSCALL_H_
 
+#include <alphaz/type.h>
 #include <asm/syscall.h>
+
+#define STDIN_FILENO        0
+#define STDOUT_FILENO       1
+#define STDERR_FILENO       2
+
 
 #ifndef __SYSCALL_ARGS_STRUCT
 #define __SYSCALL_ARGS_STRUCT
@@ -33,14 +39,13 @@ extern syscall syscall_table[];
  * 系统调用相关功能的具体实现
  */
 void sys_get_ticks(void);
-void sys_syscall_test(void);
+void sys_write(void);
 
 /**
  * 系统调用接口
  */
 
 extern unsigned int get_ticks(void);
-extern void syscall_test(void);
-
+extern ssize_t write(int fd, const void *buf, size_t n);
 
 #endif

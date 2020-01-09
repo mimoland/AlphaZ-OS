@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <alphaz/syscall.h>
 #include <alphaz/stdio.h>
 #include <asm/bug.h>
 
@@ -10,7 +11,7 @@ int printf(const char *fmt, ...)
 
     va_start(args, fmt);
     i = vsprintf(buf, fmt, args);
-    disp_str(buf);
+    write(STDOUT_FILENO, buf, i);
     va_end(args);
 
     return i;

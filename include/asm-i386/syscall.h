@@ -25,6 +25,6 @@ void set_syscall_args(struct syscall_args_struct *, struct thread_struct *);
 /* 系统调用接口 */
 unsigned int get_ticks(void);
 
-void syscall_test(void);
+ssize_t write(int fd, const void *buf, size_t n);
 
 #endif

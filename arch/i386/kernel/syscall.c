@@ -1,7 +1,7 @@
 #include <alphaz/type.h>
+#include <asm/unistd.h>
 #include <asm/syscall.h>
 #include <asm/cpu.h>
-#include <asm/bug.h>
 
 
 /**
@@ -39,7 +39,7 @@ void set_syscall_args(struct syscall_args_struct *sas,
  */
 unsigned int get_ticks(void)
 {
-    u32 d0 = 0;
+    u32 d0 = __NR_getticks;
     asm volatile(
         "int $0x80\n\t"
         :"=&a"(d0)
@@ -48,11 +48,13 @@ unsigned int get_ticks(void)
 }
 
 
-void syscall_test(void)
+ssize_t write(int fd, const void *buf, size_t n)
 {
-    u32 d0 = 1;
+    u32 d0, d1, d2, d3;
+    d0 = __NR_write;
     asm volatile(
         "int $0x80\n\t"
-        :"=&a"(d0)
-        :"0"(d0));
+        :"=&a"(d0), "=&b"(d1), "=&c"(d2), "=&d"(d3)
+        :"0"(d0), "1"(fd), "2"((u32)buf), "3"(n));
+    return d0;
 }
