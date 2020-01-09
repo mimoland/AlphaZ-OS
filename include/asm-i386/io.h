@@ -6,27 +6,22 @@
 static inline void outb(u16 port, u8 value)
 {
     asm volatile(
-        "movw %0, %%dx\n\t"
-        "movb %1, %%al\n\t"
-        "out %%al, %%dx\n\t"
+        "outb %%al, %%dx\n\t"
         "nop\n\t"
         "nop\n\t"
-        :
-        :"r"(port), "r"(value)
-        :"edx");
+        : "=&a"(value), "=&d"(port)
+        :"0"(value), "1"(port));
 }
 
 static inline u8 inb(u16 port)
 {
     u8 val;
     asm volatile(
-        "movw %1, %%dx\n\t"
-        "in %%dx, %%al\n\t"
+        "inb %%dx, %%al\n\t"
         "nop\n\t"
         "nop\n\t"
-        :"=a"(val)
-        :"r"(port)
-        :"edx");
+        :"=&a"(val), "=&d"(port)
+        :"1"(port));
     return val;
 }
 
