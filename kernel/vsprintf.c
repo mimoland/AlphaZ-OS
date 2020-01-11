@@ -2,7 +2,6 @@
 #include <alphaz/type.h>
 #include <alphaz/stdio.h>
 #include <alphaz/string.h>
-#include <asm/bug.h>
 
 /* from Linux */
 #define SIGN	2		/* unsigned/signed long */

@@ -41,7 +41,7 @@ srctree	:= $(CURDIR)
 build	:= build
 target	:= target
 src-all	:=
-libs	:= arch.a init.a kernel.a mm.a arch.a
+libs	:= arch.a init.a kernel.a mm.a arch.a kernel.a
 libs 	:= $(addprefix $(build)/, $(libs))
 
 _all: all

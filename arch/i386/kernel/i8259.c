@@ -1,6 +1,5 @@
 /* 初始化8259 */
 #include <asm/io.h>
-#include <asm/bug.h>
 #include <asm/i8259.h>
 
 void init_8259A()

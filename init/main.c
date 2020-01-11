@@ -7,25 +7,18 @@
 #include <alphaz/tty.h>
 #include <alphaz/stdio.h>
 #include <alphaz/syscall.h>
+#include <alphaz/kernel.h>
 
-#include <asm/bug.h>
 #include <asm/cpu.h>
 #include <asm/irq.h>
 #include <asm/tty.h>
 
-void test()
-{
-    printf("hello\\\tworld\n\t");
-
-}
 
 int kernel_main()
 {
-    bug_init();
     cpu_init();
     irq_init();
     syscall_init();
-    disp_str("kernel_main\n");
     mm_init();
 
     /**
@@ -34,6 +27,5 @@ int kernel_main()
      */
     task_init();
 
-    hlt();
     return 0;
 }

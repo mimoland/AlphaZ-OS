@@ -1,8 +1,8 @@
 #include <alphaz/string.h>
 #include <alphaz/malloc.h>
+#include <alphaz/kernel.h>
 #include <alphaz/mm.h>
 #include <asm/io.h>
-#include <asm/bug.h>
 
 Page *mem_map;
 
@@ -62,42 +62,16 @@ static void setup_mem_map(unsigned size)
     (mem_map + (size - 1))->flags |= PAGE_END;
 }
 
-static inline void test_mm()
-{
-    unsigned int mem_size = get_mem_size(MEM_INFO_ADDR);
-    disp_str("total memory: ");
-    disp_int(mem_size);
-    disp_str("\n");
-    Page *p_page = mem_map;
-    disp_int((int)p_page);
-    int i = 0;
-    while (1) {
-        i++;
-        if(p_page->flags & PAGE_END) break;
-        p_page++;
-    }
 
-    disp_str(" Page size: ");
-    disp_int(sizeof(Page));
-    disp_str(" page total: ");
-    disp_int(i);
-    disp_str("\n");
-    disp_int((int)p_page);
-    disp_str("\n");
-    void *p = malloc(0x1001);
-    disp_int((int)p);
-    disp_str("\n");
-    void *q = malloc(0x1001);
-    disp_int((int)q);
-    disp_str("\n");
-    free(p);
-    free(q);
-}
-
+/**
+ * mm_init - 初始化内存管理
+ */
 void mm_init()
 {
     unsigned int mem_size = get_mem_size(MEM_INFO_ADDR);
     setup_mem_map(mem_size / PRE_PAGE_SIZE);
 
-    test_mm();
+    printk("Total memory: %X byte\n", mem_size);
+    printk("Page size: %d byte, and totle setup %d memory pages\n",
+            PRE_PAGE_SIZE, mem_size / PRE_PAGE_SIZE);
 }

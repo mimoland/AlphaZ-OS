@@ -1,5 +1,5 @@
+#include <alphaz/kernel.h>
 #include <asm/irq.h>
-#include <asm/bug.h>
 #include <asm/cpu.h>
 #include <asm/i8259.h>
 
@@ -103,27 +103,18 @@ void irq_init(void)
 /* 异常的统一处理函数 */
 void exception_handler(int vec_no, int err_code, int eip, int cs, int eflags)
 {
-    disp_str("Exception! --> ");
-    disp_int(vec_no);
-    disp_str("\n");
-    disp_str("EFLAGS:");
-    disp_int(eflags);
-    disp_str(" CS:");
-    disp_int(cs);
-    disp_str(" EIP:");
-    disp_int(eip);
+    printk("Exception --> %d\n", vec_no);
+    printk("EFLAGS: 0x%x  CS: 0x%x  EIP: 0x%x", eflags, cs, eip);
 
     if (err_code != 0xffffffff) {
-        disp_str(" Error code:");
-        disp_int(err_code);
+        printk("  Error Code: 0x%x", err_code);
     }
+    printk("\n");
 }
 
 
 /* 硬件中断的统一处理函数 */
 void spurious_irq(int irq)
 {
-    disp_str("spurious_irq: ");
-    disp_int(irq);
-    disp_str("\n");
+    printk("spurious_irq: %d \n", irq);
 }

@@ -3,7 +3,6 @@
  */
 
 #include <alphaz/type.h>
-#include <asm/bug.h>
 #include <asm/cpu.h>
 
 struct tss_struct tss;

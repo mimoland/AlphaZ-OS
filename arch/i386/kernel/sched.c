@@ -1,6 +1,5 @@
 #include <alphaz/type.h>
 #include <alphaz/sched.h>
-#include <asm/bug.h>
 #include <asm/cpu.h>
 #include <asm/sched.h>
 
