@@ -2,6 +2,7 @@
 #include <asm/tty.h>
 #include <asm/irq.h>
 #include <asm/io.h>
+#include <asm/bug.h>
 
 
 /**
@@ -26,10 +27,14 @@ static inline int able_show(char c)
 static inline unsigned short get_cursor(void)
 {
     unsigned short cur;
+    int flag = get_if();
+
+    if (flag) cli();
     outb(0x3d4, 0x0e);
     cur = inb(0x3d5);
     outb(0x3d4, 0x0f);
     cur = (cur<<8) | inb(0x3d5);
+    if (flag) sti();
     return cur;
 }
 
@@ -39,10 +44,13 @@ static inline unsigned short get_cursor(void)
  */
 static inline void set_cursor(unsigned short cur)
 {
+    int flag = get_if();
+    if (flag) cli();
     outb(0x3d4,0x0e);
     outb(0x3d5, (cur >> 8) & 0xff);
     outb(0x3d4, 0x0f);
     outb(0x3d5, cur & 0xff);
+    if (flag) sti();
 }
 
 /**

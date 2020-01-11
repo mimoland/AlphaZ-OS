@@ -48,6 +48,21 @@ static inline void cli(void)
     asm volatile("cli");
 }
 
+
+/**
+ * 获取中断允许标志位
+ */
+static inline int get_if(void)
+{
+    int d0;
+    asm volatile(
+        "pushf\n\t"
+        "pop %%eax\n\t"
+        :"=&a"(d0));
+    return (d0 & 512);      // 1<<9 if在标志寄存器右起第十位
+}
+
+
 /* cpu异常处理函数，定义在arch/../kernel/entry.asm */
 extern void divide_error();
 extern void single_step_exception();
