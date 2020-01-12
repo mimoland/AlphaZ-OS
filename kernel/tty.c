@@ -4,6 +4,7 @@
 #include <alphaz/stdio.h>
 #include <alphaz/syscall.h>
 #include <alphaz/keyboard.h>
+#include <asm/bug.h>
 #include <asm/irq.h>
 #include <asm/tty.h>
 
@@ -30,6 +31,6 @@ void tty_task(void)
     while (1) {
         delay(1);               /*fix me，为什么这里必须延时 */
         if (read(STDIN_FILENO, &code, 1))
-            printf("code: %d\n", code);
+            printf("%c", code);
     }
 }
