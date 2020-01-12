@@ -6,6 +6,8 @@
 #include <alphaz/list.h>
 #include <alphaz/malloc.h>
 #include <alphaz/string.h>
+#include <alphaz/kernel.h>
+#include <alphaz/tty.h>
 
 #include <asm/sched.h>
 #include <asm/cpu.h>
@@ -126,7 +128,7 @@ static void setup_init_process(void)
 }
 
 
-static void setup_test_process(void)
+static void setup_tty_task(void)
 {
     /* 其中包括内核栈 */
     struct task_struct *ts = (struct task_struct *)alloc_page(0, 1);
@@ -134,10 +136,10 @@ static void setup_test_process(void)
     ts->pid = 2;
     ts->stack = alloc_page(0, 1);
     ts->count = 0;
-    strcpy(ts->comm, "TestB");
+    strcpy(ts->comm, "tty task");
 
-    setup_thread(&ts->thread, (u32)TestB, (u32)user_stack_top(ts), 0x1202);
-    ts->thread.eip = (u32)TestB;
+    setup_thread(&ts->thread, (u32)tty_task, (u32)user_stack_top(ts), 0x1202);
+    ts->thread.eip = (u32)tty_task;
     list_add(&ts->task, &task_head);
 }
 
@@ -152,6 +154,6 @@ void task_init(void)
     init_ticks();
     init_task_head();
     /**/
-    setup_test_process();
+    setup_tty_task();
     setup_init_process();
 }

@@ -8,6 +8,7 @@
 #include <alphaz/stdio.h>
 #include <alphaz/syscall.h>
 #include <alphaz/kernel.h>
+#include <alphaz/keyboard.h>
 
 #include <asm/cpu.h>
 #include <asm/irq.h>
@@ -20,6 +21,7 @@ int kernel_main()
     irq_init();
     syscall_init();
     mm_init();
+    keyboard_init();
 
     /**
      * 任务初始化完成后进入init进程，该方法不再返回，即调用该方法后下面的东西都不会执行

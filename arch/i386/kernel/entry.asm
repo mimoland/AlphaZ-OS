@@ -87,8 +87,16 @@ _no_turn_stack:
 
 
 ; Interrupt routhwint_masterine for irq 1 (keyboard)
+extern __keyboard_handle
 ENTRY hwint01
-        hwint_master    1
+        SAVE_ALL
+	CLOSE_CHIP_M 1
+	RESET_CHIP
+	; sti
+	call 	__keyboard_handle
+	; cli
+	OPEN_CHIP_M 1
+	POP_AND_RET
 
 
 ; Interrupt routine for irq 2 (cascade!)

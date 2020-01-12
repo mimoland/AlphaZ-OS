@@ -3,4 +3,6 @@
 
 ssize_t tty_write(const char *buf, size_t n, u8 type);
 
+void tty_task(void);
+
 #endif
