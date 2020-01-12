@@ -198,4 +198,5 @@ void keyboard_init(void)
 {
     kb_in.count = kb_in.head = kb_in.tail = 0;
     shift = 0;
+    setup_keyboard_irq();
 }

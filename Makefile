@@ -41,7 +41,7 @@ srctree	:= $(CURDIR)
 build	:= build
 target	:= target
 src-all	:=
-libs	:= arch.a init.a kernel.a mm.a
+libs	:= arch.a init.a kernel.a mm.a drivers.a
 libs 	:= $(addprefix $(build)/, $(libs))
 
 _all: all
@@ -52,6 +52,9 @@ $(target)/kernel.bin: $(libs)
 
 include arch/$(ARCH)/Makefile
 src-all += $(src-arch)
+
+include drivers/Makefile
+src-all += $(src-drivers)
 
 include init/Makefile
 src-all += $(src-init)

@@ -80,6 +80,7 @@ u32 schedule(void)
 static inline void init_ticks(void)
 {
     ticks = 0;
+    setup_counter();
 }
 
 

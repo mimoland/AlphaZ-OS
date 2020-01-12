@@ -1,5 +1,7 @@
 #include <alphaz/type.h>
 #include <alphaz/sched.h>
+#include <asm/io.h>
+#include <asm/irq.h>
 #include <asm/cpu.h>
 #include <asm/sched.h>
 
@@ -23,6 +25,21 @@ void setup_thread(struct thread_struct *thread, u32 entry, u32 stack,
     thread->eip = entry;
     thread->esp = stack;
     thread->eflags = flags;
+}
+
+
+/**
+ * setup_counter - 设置8253计数器
+ *
+ * pc上计数器的输入频率为1193180HZ
+ */
+void setup_counter(void)
+{
+    unsigned long t = 1193180;
+    outb(0x43, 0x34); /* 使用二进制 模式2 先读低字节再读高字节 计数器0 */
+    outb(0x40, (u8)(t / HZ));
+    outb(0x40, (u8)((t / HZ) >> 8));
+    enable_irq(0x00);
 }
 
 /**

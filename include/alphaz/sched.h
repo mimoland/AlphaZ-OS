@@ -25,6 +25,7 @@ extern struct list_head task_head;
  * 时钟中断计数器，也是执行进程调度程序的次数
  */
 extern unsigned long ticks;
+#define HZ  100     /* 时钟中断频率100hz */
 
 #define TASK_COMM_LEN      32      /* 进程名的长度 */
 #define KERNEL_STACK_SIZE  4096   /* 内核栈的大小 */

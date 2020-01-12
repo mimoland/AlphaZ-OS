@@ -2,6 +2,7 @@
 #define _ASM_INT_H_
 
 #include <asm/cpu.h>
+#include <asm/i8259.h>
 
 typedef void (*irq_handler) ();
 
@@ -27,6 +28,8 @@ struct idtr_struct
 extern struct gate_struct idt[];
 
 void irq_init();
+extern void enable_irq(unsigned short);
+extern void disable_irq(unsigned short);
 
 void exception_handler();
 void spurious_irq(int);

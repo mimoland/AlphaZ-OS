@@ -16,6 +16,7 @@ struct keyboard_buf {
 extern struct keyboard_buf kb_in;
 
 void keyboard_handle(u8);
+void setup_keyboard_irq(void);
 
 ssize_t keyboard_read(char *, size_t);
 

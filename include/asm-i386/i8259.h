@@ -13,6 +13,7 @@
 
 void init_8259A();
 
-
+void enable_irq(unsigned short);
+void disable_irq(unsigned short);
 
 #endif
