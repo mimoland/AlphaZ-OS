@@ -27,4 +27,6 @@ unsigned int get_ticks(void);
 
 ssize_t write(int fd, const void *buf, size_t n);
 
+ssize_t read(int fd, const void *buf, size_t n);
+
 #endif

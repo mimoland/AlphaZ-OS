@@ -58,3 +58,15 @@ ssize_t write(int fd, const void *buf, size_t n)
         :"0"(d0), "1"(fd), "2"((u32)buf), "3"(n));
     return d0;
 }
+
+
+ssize_t read(int fd, const void *buf, size_t n)
+{
+    u32 d0, d1, d2, d3;
+    d0 = __NR_read;
+    asm volatile(
+        "int $0x80\n\t"
+        :"=&a"(d0), "=&b"(d1), "=&c"(d2), "=&d"(d3)
+        :"0"(d0), "1"(fd), "2"((u32)buf), "3"(n));
+    return d0;
+}

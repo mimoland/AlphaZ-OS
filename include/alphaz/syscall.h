@@ -40,6 +40,7 @@ extern syscall syscall_table[];
  */
 void sys_get_ticks(void);
 void sys_write(void);
+void sys_read(void);
 
 /**
  * 系统调用接口
@@ -47,5 +48,5 @@ void sys_write(void);
 
 extern unsigned int get_ticks(void);
 extern ssize_t write(int fd, const void *buf, size_t n);
-
+extern ssize_t read(int fd, const void *buf, size_t n);
 #endif
