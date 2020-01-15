@@ -54,12 +54,3 @@ struct task_struct * __current(void)
     asm volatile("andl %%esp, %0":"=r"(d0):"0"(~4095));
     return (struct task_struct *)(d0);
 }
-
-
-/**
- * 进程调度，被时钟中断调用
- */
-u32 __schedule(void)
-{
-    return schedule();
-}

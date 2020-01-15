@@ -75,7 +75,7 @@ void TestA()
     int i = 0;
     while (1) {
         i++;
-        // printf("Process A: i-%d  ticks: %x\n", i, get_ticks());
+        printf("Process A: i-%d  ticks: %x\n", i, get_ticks());
         delay(10);
     }
 }

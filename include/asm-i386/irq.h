@@ -103,7 +103,7 @@ extern void copr_error();
 #define	INT_VECTOR_COPROC_ERR		0x10
 
 /* 硬件中断的处理函数，对应8259a的15个引脚 */
-extern void hwint00();
+extern void timer_interrupt();
 extern void hwint01();
 extern void hwint02();
 extern void hwint03();

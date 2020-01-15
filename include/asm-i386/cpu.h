@@ -124,6 +124,8 @@ void cpu_init(void);
 #define	SA_TIG		0
 #define	SA_TIL		4
 
+#define USER_CODE_SELECTOR ((0 & SA_RPL_MASK & SA_TI_MASK) | SA_TIL | SA_RPL3)
+#define USER_DATA_SELECTOR ((8 & SA_RPL_MASK & SA_TI_MASK) | SA_TIL | SA_RPL3)
 
 /* gdt描述符选择子 */
 #define	SELECTOR_DUMMY		   0            /* 空描述符 */

@@ -69,18 +69,13 @@ extern spurious_irq
 %endmacro
 
 
-extern __schedule
-ENTRY hwint00
-        SAVE_ALL
+extern do_timer
+ENTRY timer_interrupt
+    	SAVE_ALL
 	CLOSE_CHIP_M 0
 	RESET_CHIP
 	sti
-
-	call	__schedule
-	test	eax, eax
-	jz	_no_turn_stack
-	mov	esp, eax		; 切换栈
-_no_turn_stack:
+	call	do_timer
 	cli
 	OPEN_CHIP_M 0
 	POP_AND_RET

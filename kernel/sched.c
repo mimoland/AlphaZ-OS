@@ -19,10 +19,26 @@
  */
 struct list_head task_head;
 
+
+/**
+ * idle进程的task_struct地址
+ */
+struct task_struct *idle;
+
+
 /**
  * 时钟中断计数器
  */
-unsigned long ticks;
+unsigned long volatile __ticks_data ticks = INIT_TICKS;
+
+/**
+ *
+ */
+static inline void ticks_plus(void)
+{
+    ticks++;
+}
+
 
 /**
  * 获取当前进程的进程控制块指针
@@ -56,8 +72,6 @@ u32 schedule(void)
     struct thread_struct *thread;
     struct task_struct *curr;
 
-    ticks++;    /* 每执行一次调度程序，时钟中断计数器加一 */
-
     curr = list_first_entry(&task_head, struct task_struct, task);
 
     thread = get_thread_info(curr);
@@ -75,13 +89,22 @@ u32 schedule(void)
 
 
 /**
- * 初始化时钟中断计数器
+ * 时钟中断处理函数
  */
-static inline void init_ticks(void)
+void do_timer(void)
 {
-    ticks = 0;
-    setup_counter();
+    // struct task_struct *curr;
+
+    ticks_plus();
+    // curr = current();
+    // if (curr->count > 0) {
+    //     curr->count--;
+    //     return;
+    // }
+    // schedule();
 }
+
+
 
 
 /**
@@ -103,44 +126,12 @@ static void setup_init_process(void)
 
     ts->pid = 1;
     ts->stack = alloc_page(0, 1);
-    ts->count = 0;
+    ts->count = 1;
     strcpy(ts->comm, "TestA");
+    ts->thread.esp = (u32)user_stack_top(ts);
 
-    setup_thread(&ts->thread, (u32)TestA, (u32)user_stack_top(ts), 0x1202);
+    idle = ts;
 
-    /**
-     * 尽管上面setup_thread中指明了TestA的入口地址，但是由于一些不可预知的原因，其入口地址
-     * 并不正确，必须在这里重新显式的初始化。我不清楚引起这个bug的原因是什么，但我认为这应该
-     * 和链接器的链接有关。可能是链接器链接时误认为TestA未使用，并未将TestA加入到生成的可执
-     * 行文件中
-     */
-    ts->thread.eip = (u32)TestA;
-
-    /* 将当前进程加入进程表 */
-    list_add(&ts->task, &task_head);
-
-    tss.esp0 = (u32)kernel_stack_top(ts);
-
-    /**
-     * __switch_to_first_task中会切换堆栈，至此不在使用kernel.asm中定义的临时栈
-     * 当进程进入内核态时，内核使用分配给进程的内核栈，用户态时，进程使用分给进程的用户栈
-     */
-    __switch_to_first_task((u32)(&ts->thread));
-}
-
-
-static void setup_tty_task(void)
-{
-    /* 其中包括内核栈 */
-    struct task_struct *ts = (struct task_struct *)alloc_page(0, 1);
-
-    ts->pid = 2;
-    ts->stack = alloc_page(0, 1);
-    ts->count = 0;
-    strcpy(ts->comm, "tty task");
-
-    setup_thread(&ts->thread, (u32)tty_task, (u32)user_stack_top(ts), 0x1202);
-    ts->thread.eip = (u32)tty_task;
     list_add(&ts->task, &task_head);
 }
 
@@ -152,9 +143,9 @@ static void setup_tty_task(void)
  */
 void task_init(void)
 {
-    init_ticks();
+    // init_ticks();
+    setup_counter();
     init_task_head();
     /**/
-    setup_tty_task();
     setup_init_process();
 }

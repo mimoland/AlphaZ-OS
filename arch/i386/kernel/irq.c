@@ -56,7 +56,7 @@ static inline void setup_exception_desc(void)
 static inline void setup_hwint_desc(void)
 {
     /* 8259a相关中断 */
-    init_idt_desc(INT_VECTOR_IRQ0 + 0, DA_386IGate, hwint00, RING0);
+    init_idt_desc(INT_VECTOR_IRQ0 + 0, DA_386IGate, timer_interrupt, RING0);
     init_idt_desc(INT_VECTOR_IRQ0 + 1, DA_386IGate, hwint01, RING0);
     init_idt_desc(INT_VECTOR_IRQ0 + 2, DA_386IGate, hwint02, RING0);
     init_idt_desc(INT_VECTOR_IRQ0 + 3, DA_386IGate, hwint03, RING0);

@@ -8,6 +8,8 @@
 #include <asm/sched.h>
 #include <asm/cpu.h>
 
+#define __ticks_data __attribute__((section(".data")))
+
 void task_init(void);
 
 u32 schedule(void);
@@ -18,14 +20,27 @@ struct thread_struct * get_thread_info(struct task_struct *task);
 
 void copy_thread(struct thread_struct *, struct thread_struct *);
 
+/*
+ * 时钟中断处理程序，在entry.asm中被时钟中断调用
+ */
+void do_timer(void);
+
 /* 进程链表头 */
 extern struct list_head task_head;
+
+#define HZ  100     /* 时钟中断频率100hz */
+
+/**
+ * 计数器的初值，它定义为ticks溢出前300s处
+ * 之所以定义这样的初值是为了使因溢出造成的问题尽早暴露
+ */
+#define INIT_TICKS  ((unsigned long)(unsigned int)(-300*HZ))
 
 /**
  * 时钟中断计数器，也是执行进程调度程序的次数
  */
-extern unsigned long ticks;
-#define HZ  100     /* 时钟中断频率100hz */
+extern unsigned long volatile __ticks_data ticks;
+
 
 #define TASK_COMM_LEN      32      /* 进程名的长度 */
 #define KERNEL_STACK_SIZE  4096   /* 内核栈的大小 */
@@ -55,6 +70,9 @@ struct task_struct
      * TODO: 进程所用内存空间的描述，包括页表，空间大小等
      */
 };
+
+
+extern struct task_struct *idle;
 
 
 /**
