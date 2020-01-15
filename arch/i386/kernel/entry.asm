@@ -9,7 +9,6 @@ align  16
 
 
 %macro SAVE_ALL 0
-	sub	esp, 4
 	pushad
 	push	ds
 	push	es
@@ -23,7 +22,6 @@ align  16
 	pop	es
 	pop	ds
 	popad
-	add	esp, 4
 	iretd
 %endmacro
 

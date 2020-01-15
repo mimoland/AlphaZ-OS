@@ -17,9 +17,9 @@ struct syscall_args_struct
 };
 #endif
 
-void get_syscall_args(struct syscall_args_struct *, struct thread_struct *);
+void get_syscall_args(struct syscall_args_struct *, struct pt_regs *);
 
-void set_syscall_args(struct syscall_args_struct *, struct thread_struct *);
+void set_syscall_args(struct syscall_args_struct *, struct pt_regs *);
 
 
 /* 系统调用接口 */

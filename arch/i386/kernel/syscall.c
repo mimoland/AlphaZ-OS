@@ -8,14 +8,14 @@
  * 根据cpu上下文获取系统调用的参数表
  */
 void get_syscall_args(struct syscall_args_struct *sas,
-                        struct thread_struct *thread)
+                        struct pt_regs *regs)
 {
-    sas->arg0 = thread->eax;
-    sas->arg1 = thread->ebx;
-    sas->arg2 = thread->ecx;
-    sas->arg3 = thread->edx;
-    sas->arg4 = thread->esi;
-    sas->arg5 = thread->edi;
+    sas->arg0 = regs->eax;
+    sas->arg1 = regs->ebx;
+    sas->arg2 = regs->ecx;
+    sas->arg3 = regs->edx;
+    sas->arg4 = regs->esi;
+    sas->arg5 = regs->edi;
 }
 
 
@@ -23,14 +23,14 @@ void get_syscall_args(struct syscall_args_struct *sas,
  * 设置系统调用的返回参数
  */
 void set_syscall_args(struct syscall_args_struct *sas,
-                        struct thread_struct *thread)
+                        struct pt_regs *regs)
 {
-    thread->eax = sas->arg0;
-    thread->ebx = sas->arg1;
-    thread->ecx = sas->arg2;
-    thread->edx = sas->arg3;
-    thread->esi = sas->arg4;
-    thread->edi = sas->arg5;
+    regs->eax = sas->arg0;
+    regs->ebx = sas->arg1;
+    regs->ecx = sas->arg2;
+    regs->edx = sas->arg3;
+    regs->esi = sas->arg4;
+    regs->edi = sas->arg5;
 }
 
 

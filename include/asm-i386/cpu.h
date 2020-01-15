@@ -64,28 +64,43 @@ struct gate_struct
 } __attribute__((packed));
 
 
-/* 该结构体用于记录cpu的上下文信息 */
+/**
+ * 被中断时压入内核栈的寄存器, 按照压栈的顺序定义
+ */
+struct pt_regs
+{
+    unsigned long gs;
+	unsigned long fs;
+	unsigned long es;
+	unsigned long ds;
+	unsigned long edi;
+	unsigned long esi;
+	unsigned long ebp;
+	unsigned long esp0;
+	unsigned long ebx;
+	unsigned long edx;
+	unsigned long ecx;
+	unsigned long eax;
+	unsigned long eip;
+	unsigned long cs;
+	unsigned long eflags;
+	unsigned long esp;
+	unsigned long ss;
+} __attribute__((packed));
+
+
+/**
+ * 进程的cpu上下文信息
+ */
 struct thread_struct
 {
-    u32	gs;
-	u32	fs;
-	u32	es;
-	u32	ds;
-	u32	edi;
-	u32	esi;
-	u32	ebp;
-	u32	kernel_esp;
-	u32	ebx;
-	u32	edx;
-	u32	ecx;
-	u32	eax;
-	u32	retaddr;
-	u32	eip;
-	u32	cs;
-	u32	eflags;
-	u32	esp;
-	u32	ss;
+    unsigned long esp0;
+    unsigned long esp;
+    unsigned long eip;
+
+    unsigned long cr2;
 } __attribute__((packed));
+
 
 /*
  * GDT的定义，固定为256个，只初始化了前6个

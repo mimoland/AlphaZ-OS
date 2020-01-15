@@ -12,11 +12,11 @@
 
 void task_init(void);
 
-u32 schedule(void);
+void schedule(void);
 
 struct task_struct * current(void);
 
-struct thread_struct * get_thread_info(struct task_struct *task);
+struct pt_regs * get_pt_regs(struct task_struct *task);
 
 void copy_thread(struct thread_struct *, struct thread_struct *);
 

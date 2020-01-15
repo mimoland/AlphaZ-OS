@@ -52,12 +52,12 @@ struct task_struct * current(void)
 /**
  * 获取当前进程的cpu上下文
  */
-struct thread_struct * get_thread_info(struct task_struct *task)
+struct pt_regs * get_pt_regs(struct task_struct *task)
 {
-    struct thread_struct *thread;
-    thread = (struct thread_struct *)kernel_stack_top(task);
-    thread = thread - 1;
-    return thread;
+    struct pt_regs *regs;
+    regs = (struct pt_regs *)kernel_stack_top(task);
+    regs = regs - 1;
+    return regs;
 }
 
 
@@ -67,24 +67,9 @@ void copy_thread(struct thread_struct *dest,
     memcpy(dest, src, sizeof(struct thread_struct));
 }
 
-u32 schedule(void)
+void schedule(void)
 {
-    struct thread_struct *thread;
-    struct task_struct *curr;
 
-    curr = list_first_entry(&task_head, struct task_struct, task);
-
-    thread = get_thread_info(curr);
-
-    copy_thread(&curr->thread, thread);
-    list_del(&curr->task);
-    list_add_tail(&curr->task, &task_head);
-
-    /* 切换到下一个进程 */
-    curr = list_first_entry(&task_head, struct task_struct, task);
-    tss.esp0 = (u32)kernel_stack_top(curr);
-
-    return (u32)(&curr->thread);
 }
 
 
@@ -119,18 +104,21 @@ static void init_task_head(void)
 /**
  * 创建init进程
  */
-static void setup_init_process(void)
+static void setup_zero_process(void)
 {
     /* 其中包括内核栈 */
     struct task_struct *ts = (struct task_struct *)alloc_page(0, 1);
 
-    ts->pid = 1;
+    ts->pid = 0;
     ts->stack = alloc_page(0, 1);
     ts->count = 1;
-    strcpy(ts->comm, "TestA");
+    strcpy(ts->comm, "Zero Process");
+    ts->thread.esp0 = (u32)kernel_stack_top(ts);
     ts->thread.esp = (u32)user_stack_top(ts);
 
     idle = ts;
+
+    tss.esp0 = ts->thread.esp0;
 
     list_add(&ts->task, &task_head);
 }
@@ -147,5 +135,5 @@ void task_init(void)
     setup_counter();
     init_task_head();
     /**/
-    setup_init_process();
+    setup_zero_process();
 }

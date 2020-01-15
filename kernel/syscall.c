@@ -12,12 +12,12 @@ void sys_get_ticks(void)
 {
     struct syscall_args_struct args;
     struct task_struct * task = current();
-    struct thread_struct * thread = get_thread_info(task);
-    get_syscall_args(&args, thread);
+    struct pt_regs * regs = get_pt_regs(task);
+    get_syscall_args(&args, regs);
 
     args.arg0 = ticks;
 
-    set_syscall_args(&args, thread);
+    set_syscall_args(&args, regs);
 }
 
 
@@ -28,9 +28,9 @@ void sys_write(void)
     size_t n;
     struct syscall_args_struct args;
     struct task_struct * task = current();
-    struct thread_struct * thread = get_thread_info(task);
+    struct pt_regs * regs = get_pt_regs(task);
 
-    get_syscall_args(&args, thread);
+    get_syscall_args(&args, regs);
     fd = (int)args.arg1;
     buf = (void *)args.arg2;
     n = (size_t)args.arg3;
@@ -41,7 +41,7 @@ void sys_write(void)
     }
 
     args.arg0 = n;
-    set_syscall_args(&args, thread);
+    set_syscall_args(&args, regs);
 }
 
 
@@ -51,8 +51,8 @@ void sys_read(void)
     size_t n;
     struct syscall_args_struct args;
     struct task_struct * task = current();
-    struct thread_struct * thread = get_thread_info(task);
-    get_syscall_args(&args, thread);
+    struct pt_regs * regs = get_pt_regs(task);
+    get_syscall_args(&args, regs);
 
     fd = (int)args.arg1;
     n = (size_t)args.arg3;
@@ -62,7 +62,7 @@ void sys_read(void)
         args.arg0 = keyboard_read((char *)args.arg2, n);
     }
 
-    set_syscall_args(&args, thread);
+    set_syscall_args(&args, regs);
 }
 
 

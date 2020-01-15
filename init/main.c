@@ -28,7 +28,6 @@ void kernel_main()
     /**
      * 切换到第进程0执行
      */
-    tss.esp0 = (u32)kernel_stack_top(idle);
     sti();
     move_to_user_mode(idle->thread.esp);
     TestA();
