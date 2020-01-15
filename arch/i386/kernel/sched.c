@@ -1,5 +1,6 @@
 #include <alphaz/type.h>
 #include <alphaz/sched.h>
+#include <alphaz/compiler.h>
 #include <asm/io.h>
 #include <asm/irq.h>
 #include <asm/cpu.h>
@@ -31,4 +32,18 @@ struct task_struct * __current(void)
     u32 d0;
     asm volatile("andl %%esp, %0":"=r"(d0):"0"(~4095));
     return (struct task_struct *)(d0);
+}
+
+
+/**
+ * __switch_to - 进程切换的cpu上下文切换
+ * @prev: 当前进程的进程控制块指针 in eax
+ * @next: 下一个进程的进程控制块指针 in edx
+ */
+struct task_struct * __regparm3
+__switch_to(struct task_struct *prev, struct task_struct *next)
+{
+
+    tss.esp0 = next->thread.esp0;
+    return prev;
 }

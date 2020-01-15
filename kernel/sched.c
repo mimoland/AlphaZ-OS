@@ -9,6 +9,7 @@
 #include <alphaz/kernel.h>
 #include <alphaz/tty.h>
 
+#include <asm/system.h>
 #include <asm/sched.h>
 #include <asm/cpu.h>
 #include <asm/bug.h>
@@ -61,15 +62,28 @@ struct pt_regs * get_pt_regs(struct task_struct *task)
 }
 
 
-void copy_thread(struct thread_struct *dest,
-                                struct thread_struct *src)
+static struct task_struct *
+context_switch(struct task_struct *prev, struct task_struct *next)
 {
-    memcpy(dest, src, sizeof(struct thread_struct));
+    switch_to(prev, next, prev);
+    return prev;
 }
 
+
+/**
+ * schedule是进程的调度器，该方法在就绪进程队列中选出一个进程进行切换
+ * 当前进程的调度并不涉及优先级和运行时间的一系列复杂因素，仅仅是将时间片消耗完的进程
+ * 移到队尾，然后选下一个进程作为可运行的进程
+ */
 void schedule(void)
 {
+    struct task_struct *prev, *next;
 
+    prev = list_first_entry(&task_head, struct task_struct, task);
+    list_del(&prev->task);
+    list_add_tail(&prev->task, &task_head);
+    next = list_first_entry(&task_head, struct task_struct, task);
+    context_switch(prev, next);
 }
 
 
@@ -78,18 +92,9 @@ void schedule(void)
  */
 void do_timer(void)
 {
-    // struct task_struct *curr;
-
     ticks_plus();
-    // curr = current();
-    // if (curr->count > 0) {
-    //     curr->count--;
-    //     return;
-    // }
-    // schedule();
+    schedule();
 }
-
-
 
 
 /**

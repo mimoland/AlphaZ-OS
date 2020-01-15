@@ -246,12 +246,6 @@ exception:
 	hlt
 
 
-ENTRY __switch_to_first_task
-	mov 	eax, [esp + 4]
-	mov	esp, eax
-
-	POP_AND_RET
-
 ; 系统调用入口 int 0x80
 ; eax中为功能号
 extern syscall_table
