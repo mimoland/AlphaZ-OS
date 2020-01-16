@@ -75,8 +75,9 @@ void TestA()
     int i = 0;
     while (1) {
         i++;
-        printf("Process A: i-%d  ticks: %x\n", i, get_ticks());
-        delay(10);
+        // printf("Process A: %d\n", getpid());
+        debug();
+        delay(5);
     }
 }
 
@@ -89,10 +90,10 @@ void TestB()
 {
     int i = 0;
     while (1) {
-        // syscall_test();
-        // printf("Process B: i-%d\n", i);
+        // printf("Process B: %d\n", getpid());
+        debug();
         i++;
-        delay(10);
+        delay(5);
     }
 }
 

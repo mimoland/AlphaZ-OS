@@ -48,6 +48,17 @@ unsigned int get_ticks(void)
 }
 
 
+pid_t fork(void)
+{
+    int d0 = __NR_fork;
+    asm volatile(
+        "int $0x80\n\t"
+        :"=&a"(d0)
+        :"0"(d0));
+    return d0;
+}
+
+
 ssize_t write(int fd, const void *buf, size_t n)
 {
     u32 d0, d1, d2, d3;
@@ -69,4 +80,25 @@ ssize_t read(int fd, const void *buf, size_t n)
         :"=&a"(d0), "=&b"(d1), "=&c"(d2), "=&d"(d3)
         :"0"(d0), "1"(fd), "2"((u32)buf), "3"(n));
     return d0;
+}
+
+
+pid_t getpid(void)
+{
+    int d0 = __NR_getpid;
+    asm volatile(
+        "int $0x80\n\t"
+        :"=&a"(d0)
+        :"0"(d0));
+    return d0;
+}
+
+
+void debug(void)
+{
+    int d0 = __NR_debug;
+    asm volatile(
+        "int $0x80\n\t"
+        :"=&a"(d0)
+        :"0"(d0));
 }

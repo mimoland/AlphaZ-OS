@@ -39,14 +39,20 @@ extern syscall syscall_table[];
  * 系统调用相关功能的具体实现
  */
 void sys_get_ticks(void);
+void sys_fork(void);
 void sys_write(void);
 void sys_read(void);
+void sys_getpid(void);
+void sys_debug(void);
 
 /**
  * 系统调用接口
  */
 
 extern unsigned int get_ticks(void);
+extern pid_t fork(void);
 extern ssize_t write(int fd, const void *buf, size_t n);
 extern ssize_t read(int fd, const void *buf, size_t n);
+extern pid_t getpid(void);
+extern void debug(void);
 #endif

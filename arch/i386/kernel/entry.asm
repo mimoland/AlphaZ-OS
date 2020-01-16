@@ -68,12 +68,14 @@ extern spurious_irq
 
 
 extern do_timer
+global ret_from_fork
 ENTRY timer_interrupt
     	SAVE_ALL
 	CLOSE_CHIP_M 0
 	RESET_CHIP
 	sti
 	call	do_timer
+ret_from_fork:
 	cli
 	OPEN_CHIP_M 0
 	POP_AND_RET

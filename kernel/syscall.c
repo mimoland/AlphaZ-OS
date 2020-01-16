@@ -66,14 +66,40 @@ void sys_read(void)
 }
 
 
+void sys_getpid(void)
+{
+    struct syscall_args_struct args;
+    struct task_struct * task = current();
+    struct pt_regs * regs = get_pt_regs(task);
+    get_syscall_args(&args, regs);
+
+    args.arg0 = current()->pid;
+
+    set_syscall_args(&args, regs);
+}
+
+
+void sys_debug(void)
+{
+    struct task_struct *p = current();
+    struct pt_regs * regs = get_pt_regs(p);
+
+    printk("pid: %d esp0: %x esp: %x\n", p->pid, p->thread.esp0, regs->esp);
+}
+
+
 /**
  * 初始化系统调用表
  */
 static inline void setup_syscall_table(void)
 {
     syscall_table[__NR_getticks] = sys_get_ticks;
+    syscall_table[__NR_fork] = sys_fork;
     syscall_table[__NR_read] = sys_read;
     syscall_table[__NR_write] = sys_write;
+    syscall_table[__NR_getpid] = sys_getpid;
+
+    syscall_table[__NR_debug] = sys_debug;
 }
 
 

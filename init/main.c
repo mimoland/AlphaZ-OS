@@ -11,6 +11,7 @@
 #include <alphaz/keyboard.h>
 
 #include <asm/system.h>
+#include <asm/bug.h>
 #include <asm/cpu.h>
 #include <asm/irq.h>
 #include <asm/tty.h>
@@ -30,5 +31,14 @@ void kernel_main()
      */
     sti();
     move_to_user_mode(idle->thread.esp);
+
+    if (!fork()) {
+        TestB();
+    }
+
+    if (!fork()) {
+        TestB();
+    }
+
     TestA();
 }

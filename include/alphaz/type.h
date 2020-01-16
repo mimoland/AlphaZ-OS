@@ -10,7 +10,7 @@ typedef unsigned long   u64;
 
 typedef unsigned long   size_t;
 
-typedef unsigned short  pid_t;
+typedef int             pid_t;
 
 typedef long            ssize_t;
 

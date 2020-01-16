@@ -25,8 +25,12 @@ void set_syscall_args(struct syscall_args_struct *, struct pt_regs *);
 /* 系统调用接口 */
 unsigned int get_ticks(void);
 
+pid_t fork(void);
+
 ssize_t write(int fd, const void *buf, size_t n);
 
 ssize_t read(int fd, const void *buf, size_t n);
+
+void debug(void);
 
 #endif
