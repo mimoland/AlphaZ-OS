@@ -2,12 +2,16 @@
 #define _ASM_SYSTEM_H_
 
 #include <asm/cpu.h>
+#include <alphaz/sched.h>
 
-#define move_to_user_mode(user_stack) do {                              \
+#define move_to_user_mode() do {                              \
     asm volatile(                                                       \
         "pushl %%ebx\n\t"                                               \
         "pushl %%eax\n\t"                                               \
         "pushfl\n\t"                                                    \
+        "popl %%eax\n\t"                                                \
+        "or $0x200, %%eax\n\t"      /* 开启中断 */                       \
+        "pushl %%eax\n\t"                                               \
         "pushl %%edx\n\t"                                               \
         "pushl $1f\n\t"                                                 \
         "iretl\n\t"                                                     \
@@ -17,7 +21,7 @@
         "mov %%ax, %%es\n\t"                                            \
         "mov %%ax, %%fs\n\t"                                            \
         :                                                               \
-        :"a"(user_stack), "b"(USER_DATA_SELECTOR), "d"(USER_CODE_SELECTOR)); \
+        :"a"(idle->thread.esp), "b"(USER_DATA_SELECTOR), "d"(USER_CODE_SELECTOR)); \
 } while (0)
 
 

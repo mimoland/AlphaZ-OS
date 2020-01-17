@@ -23,11 +23,11 @@ static inline void disp_char(char c, u8 color, u32 pos)
 static void itoa(int num, char *buf)
 {
     char ch;
-
+    int i;
     *buf++ = '0';
     *buf++ = 'x';
 
-    for (int i = 28; i >= 0; i -= 4) {
+    for (i = 28; i >= 0; i -= 4) {
         ch = (num >> i) & 0xf;
         if(ch <= 9) ch = ch + '0';
         else ch = ch - 10 + 'A';
@@ -39,7 +39,9 @@ static void itoa(int num, char *buf)
 void disp_str(char *buf)
 {
     u32 pos = disp_pos;
-    for(char* cp = buf; *cp != 0; cp++) {
+    char *cp;
+
+    for(cp = buf; *cp != 0; cp++) {
         if(*cp == '\n') {
             pos = (pos / 160 + 1) * 160;
             continue;

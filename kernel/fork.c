@@ -7,8 +7,8 @@
 
 int generate_pid(void)
 {
-    static int pid = 1;
-    return pid++;
+    pid = (pid + 1) % 65536;
+    return pid;
 }
 
 

@@ -29,8 +29,7 @@ void kernel_main()
     /**
      * 切换到第进程0执行
      */
-    sti();
-    move_to_user_mode(idle->thread.esp);
+    move_to_user_mode();
 
     if (!fork()) {
         TestB();

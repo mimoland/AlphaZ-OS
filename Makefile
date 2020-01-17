@@ -15,7 +15,7 @@ AR 			= ar
 ASMKFLAGS	= -f elf
 CFLAGS		= -I include/ -c -O2 -Wall -fno-builtin -fno-common \
 				-fno-stack-protector
-LDFLAGS		= -s -Ttext $(ENTRYPOINT)
+LDFLAGS		= -s -Ttext $(ENTRYPOINT) --whole-archive
 ARFLAGS		= -rc
 DASMFLAGS	=
 PHONY		:= _all
@@ -48,7 +48,7 @@ _all: all
 
 
 $(target)/kernel.bin: $(libs)
-	$(LD) $(LDFLAGS) -o $@ $^ $^
+	$(LD) $(LDFLAGS) -o $@ $^
 
 include arch/$(ARCH)/Makefile
 src-all += $(src-arch)

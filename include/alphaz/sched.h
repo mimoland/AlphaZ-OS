@@ -9,6 +9,7 @@
 #include <asm/cpu.h>
 
 #define __ticks_data __attribute__((section(".data")))
+#define __pid_data  __attribute__((section(".data")))
 
 void task_init(void);
 
@@ -41,6 +42,14 @@ extern struct list_head task_head;
  */
 extern unsigned long volatile __ticks_data ticks;
 
+
+/* 用户进程pid的起始值 */
+#define INIT_PID   ((pid_t)1024)
+
+/**
+ * pid分配的起始位置
+ */
+extern pid_t volatile __pid_data pid;
 
 #define TASK_COMM_LEN      32      /* 进程名的长度 */
 #define KERNEL_STACK_SIZE  4096   /* 内核栈的大小 */

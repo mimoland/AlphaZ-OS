@@ -32,6 +32,8 @@ struct task_struct *idle;
  */
 unsigned long volatile __ticks_data ticks = INIT_TICKS;
 
+pid_t volatile __pid_data pid = INIT_PID;
+
 /**
  *
  */
