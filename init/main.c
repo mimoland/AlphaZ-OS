@@ -9,6 +9,7 @@
 #include <alphaz/syscall.h>
 #include <alphaz/kernel.h>
 #include <alphaz/keyboard.h>
+#include <alphaz/init.h>
 
 #include <asm/system.h>
 #include <asm/bug.h>
@@ -26,18 +27,17 @@ void kernel_main()
     keyboard_init();
     task_init();
 
+    cls_screen();
     /**
      * 切换到第进程0执行
      */
     move_to_user_mode();
 
     if (!fork()) {
-        TestB();
+        init();
     }
 
-    if (!fork()) {
-        TestB();
+    while (1) {
+        delay(1);
     }
-
-    TestA();
 }

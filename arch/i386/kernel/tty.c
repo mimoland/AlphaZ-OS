@@ -117,3 +117,17 @@ ssize_t __tty_write(const char *buf, size_t n, u8 type)
     }
     return n;
 }
+
+
+/**
+ * cls_screen - 清除屏幕所有内容，并将光标置于屏幕起始位置
+ */
+void cls_screen(void)
+{
+    int i;
+    set_cursor(0);
+    for (i = 0; i < 80 * 25; i++) {
+        write_char(' ', 0x0f, i);
+    }
+    set_cursor(0);
+}

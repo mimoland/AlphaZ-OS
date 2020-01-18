@@ -36,7 +36,7 @@ u32 keymap[NR_SCAN_CODES * MAP_COLS] = {
 /* 0x19 - 'p'		*/	'p',		'P',		0,
 /* 0x1A - '['		*/	'[',		'{',		0,
 /* 0x1B - ']'		*/	']',		'}',		0,
-/* 0x1C - CR/LF		*/	ENTER,		ENTER,		PAD_ENTER,
+/* 0x1C - CR/LF		*/	'\n',		ENTER,		PAD_ENTER,      /* 这里先简单的处理下回车 */
 /* 0x1D - l. Ctrl	*/	CTRL_L,		CTRL_L,		CTRL_R,
 /* 0x1E - 'a'		*/	'a',		'A',		0,
 /* 0x1F - 's'		*/	's',		'S',		0,
@@ -170,7 +170,6 @@ ssize_t keyboard_read(char *buf, size_t n)
         } else if (scan_code == 0xe0) {
 
         } else {
-            // 可打印字符, 只处理大小写字母和字符
             if (scan_code == 0x2a || scan_code == 0x36) {
                 shift = 1;
                 return 0;
