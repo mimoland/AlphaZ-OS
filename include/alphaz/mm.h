@@ -7,7 +7,7 @@
 #define MEM_INFO_ADDR   0x600
 
 /* mem_map的起始地址 */
-#define MEM_MAP_ADDR    0x200100
+#define MEM_MAP_ADDR    0x300100
 
 typedef struct s_page
 {
@@ -31,9 +31,9 @@ void mm_init();
 /* 不同功能的内存范围 */
 /* 保留内存范围，动态分配和用户进程不得使用 */
 #define MEM_KEEP_FROM    0
-#define MEM_KEEP_END     0x400000
+#define MEM_KEEP_END     0x500000
 
 /* 用户可使用的内存 */
-#define MEM_ALLOAD       0x400000
+#define MEM_ALLOAD       0x500000
 
 #endif

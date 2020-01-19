@@ -1,7 +1,7 @@
 # 该Makefile是项目的顶层Makefile，管理整个项目的编译工作
 
 # kernel入口地址
-ENTRYPOINT = 0x30400
+ENTRYPOINT = 0x100000
 
 MAKEFLAGS  += -rR --no-print-directory
 
@@ -15,7 +15,7 @@ AR 			= ar
 ASMKFLAGS	= -f elf
 CFLAGS		= -I include/ -c -O2 -Wall -fno-builtin -fno-common \
 				-fno-stack-protector
-LDFLAGS		= -s -Ttext $(ENTRYPOINT) --whole-archive
+LDFLAGS		= -Ttext $(ENTRYPOINT) --whole-archive
 ARFLAGS		= -rc
 DASMFLAGS	=
 PHONY		:= _all

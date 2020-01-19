@@ -1,9 +1,9 @@
 
-org	0100h
+org	0000h
 
 ; 对loader加载位置的更改务必要更改boot中的加载位置和此处的加载位置
-BaseOfLoader		equ	09000h			; loader的段地址
-OffsetOfLoader		equ	0100h			; loader的偏移地址
+BaseOfLoader		equ	01000h			; loader的段地址
+OffsetOfLoader		equ	0000h			; loader的偏移地址
 BaseOfLoaderPhyAddr	equ	BaseOfLoader*10h	; loader的物理基址
 
 BaseOfScreen		equ	0b800h			; 显存的段地址
@@ -12,10 +12,16 @@ ColOfScreen		equ	80			; 屏幕列数
 
 BaseOfKernel		equ	08000h			; kernel的段地址
 OffsetOfKernel		equ	0h			; kernel的偏移地址
-BaseOfKernelPhyAddr	equ	BaseOfKernel*10h 	; kernel的物理地址
 
-BaseOfPageDir		equ	100000h			; 页目录基址
-BaseOfPageTable		equ	101000h			; 页表基址
+BaseOfKernelPhyAddr	equ	200000h		 	; kernel临时加载的位置，还需要根据ELF信息进行调整
+
+; 这里假设kernel的大小不会超过1MB
+BaseOfPageDir		equ	200000h			; 页目录基址
+BaseOfPageTable		equ	201000h			; 页表基址
+
+BaseOfKernelTmp		equ	07e0h			; kernel加载缓存的段地址
+OffsetOfKernelTmp	equ 	0000h			; kernel加载缓存的偏移地址
+BaseOfKernelTmpPhyAddr	equ 	BaseOfKernelTmp*10h     ; kernel加载缓存的物理基址
 
 MemInfoAddr		equ	600h			; 线性地址
 
@@ -96,7 +102,28 @@ _mem_save_end:
 	call	real_mode_disp_str
 
 
-	; 加载内核，和boot中加载loader并无区别
+	; 进入big real mode
+	in	al, 0x92
+	or 	al, 00000010b
+	out	0x92, al					; 打开a20地址线
+
+	cli
+
+	lgdt 	[gdt_ptr]
+
+	mov	eax, cr0
+	or 	eax, 1
+	mov	cr0, eax					; cr0 PE位置位
+
+	mov 	ax, selector_data
+	mov	fs, ax						; 指定fs位big real mode使用的寄存器
+
+	mov	eax, cr0
+	and 	al, 11111110b
+	mov 	cr0, eax 					; cr0 PE位复位
+
+
+	; 加载内核
 	; 寻找KERNEL.BIN
 	mov	word [SectorNo], SectorNoOfRootDirectory	; 要读的扇区号
 	mov	word [RootDirSize], RootDirSectors		; 根目录的扇区数
@@ -104,15 +131,15 @@ _search_int_root_dir_begin:
 	cmp	word [RootDirSize], 0
 	jz	_kernel_not_found				; 根目录已读完，未找到kernel
 	dec 	word [RootDirSize]
-	mov 	ax, BaseOfKernel
+	mov 	ax, BaseOfKernelTmp
 	mov 	es, ax
-	mov 	bx, OffsetOfKernel				; es:bx 指向扇区要读到的地方
+	mov 	bx, OffsetOfKernelTmp				; es:bx 指向扇区要读到的地方
 	mov 	ax, [SectorNo]					; 要读的扇区号
 	mov	cl, 1						; 读一个扇区
 	call	real_mode_read_sector
 
 	mov	si, KernelFileName				; ds:si 为kernel的文件名
-	mov	di, OffsetOfKernel				; es:di 为读来的根目录
+	mov	di, OffsetOfKernelTmp				; es:di 为读来的根目录
 	cld
 	mov	dx, 0x10					; 根目录中一个条目占32字节，一个扇区共16个条目
 _search_kernel:
@@ -165,15 +192,27 @@ _load_kernel:
 	push	cx
 	add	cx, ax
 	add	cx, DeltaSectorNo				; kernel.bin 的起始扇区号
-	mov	ax, BaseOfKernel
+	mov	ax, BaseOfKernelTmp
 	mov	es, ax
-	mov	bx, OffsetOfKernel
+	mov	bx, OffsetOfKernelTmp
+	mov 	edi, BaseOfKernelPhyAddr
 	mov	ax, cx
 
 _load_kernel_goon:
 
 	mov	cl, 1
 	call	real_mode_read_sector
+
+	; 读取一个扇区后，将该扇区从kernel文件的临时缓冲区移动到应到的位置
+	mov 	si, OffsetOfKernelTmp
+	mov	cx, 512
+_kernel_move:
+	mov 	al, [es:si]
+	mov 	[fs:edi], al
+	inc 	si
+	inc 	edi
+	loop 	_kernel_move
+
 	pop	ax
 	call	real_mode_get_FAT_entry
 	cmp	ax, 0xfff
@@ -181,7 +220,6 @@ _load_kernel_goon:
 	push	ax
 	add	ax, RootDirSectors
 	add	ax, DeltaSectorNo
-	add	bx, [BPB_BytsPerSec]
 	jmp	_load_kernel_goon
 
 _kernel_loaded:
@@ -374,18 +412,19 @@ protect_mode:
 		mov	ecx, ComeInProtModeMessage
 		call	disp_str
 
+		mov	eax, [BaseOfKernelPhyAddr + 0x18]		; 暂存入口地址
+		call	init_kernel
+
+
 		; 开启内存分页
 		call	setup_mem_page
 		; 将内存的大小写入0x600处供内核内存管理使用
 		mov	byte [MemInfoAddr], 0xff	; 标示
-		mov	eax, [MemSizeProtMode]
-		mov	dword [MemInfoAddr + 2], eax
+		mov	ebx, [MemSizeProtMode]
+		mov	dword [MemInfoAddr + 2], ebx
 		; 显示信息
 		mov	ecx, SetupedPageMessage
 		call	disp_str
-
-		mov	eax, [BaseOfKernelPhyAddr + 0x18]		; 暂存入口地址
-		call	init_kernel
 
 		; 跳入内核
 		jmp	eax

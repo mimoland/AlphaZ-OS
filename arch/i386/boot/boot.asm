@@ -5,8 +5,8 @@
 	org 7c00h		; 指示程序加载到7c00h处
 
 BaseOfStack	equ	7c00h	; 栈的段地址
-BaseOFLoader	equ	09000h	; loader的段地址
-OffsetOfLoader  equ	0100h	; loader的偏移地址
+BaseOFLoader	equ	01000h	; loader的段地址
+OffsetOfLoader  equ	0000h	; loader的偏移地址
 BaseOfScreen	equ	0b800h	; 显存的段地址
 RowOfScreen	equ	25	; 屏幕行数
 ColOfScreen	equ	80	; 屏幕列数
