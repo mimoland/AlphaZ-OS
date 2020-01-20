@@ -79,6 +79,7 @@ struct task_struct
 
     struct task_struct *parent;         /* 父进程 */
     struct list_head children;          /* 子进程链表 */
+    struct list_head sibling;           /* 连接到父进程的子进程链表 */
 
     struct thread_struct thread;        /* cpu的上下文信息 */
     struct mm_struct *mm;               /* 内存空间分布 */

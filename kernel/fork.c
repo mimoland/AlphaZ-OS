@@ -42,7 +42,7 @@ void sys_fork(void)
 
     list_add_tail(&new->task, &task_head);
 
-    list_add(&new->task, &curr->children);
+    list_add(&new->sibling, &curr->children);
 
     args.arg0 = new->pid;
     set_syscall_args(&args, regs);
