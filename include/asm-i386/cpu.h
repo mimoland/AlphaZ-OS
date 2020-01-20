@@ -94,12 +94,12 @@ struct pt_regs
  */
 struct thread_struct
 {
-    unsigned long esp0;
-    unsigned long esp;
-    unsigned long eip;
+    unsigned long esp0;         /* 内核栈基址 */
+    unsigned long esp;          /* 内核栈当前栈指针 */
+    unsigned long eip;          /* 内核态当前代码指针 */
 
-    unsigned long cr2;
-} __attribute__((packed));
+    unsigned long cr2;          /* cr2控制寄存器 */
+};
 
 
 /*

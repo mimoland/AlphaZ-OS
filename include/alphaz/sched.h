@@ -11,11 +11,11 @@
 #define __ticks_data __attribute__((section(".data")))
 #define __pid_data  __attribute__((section(".data")))
 
+#define current __current()
+
 void task_init(void);
 
 void schedule(void);
-
-struct task_struct * current(void);
 
 struct pt_regs * get_pt_regs(struct task_struct *task);
 
@@ -55,6 +55,16 @@ extern pid_t volatile __pid_data pid;
 #define KERNEL_STACK_SIZE  4096   /* 内核栈的大小 */
 #define USER_STACK_SIZE    4096   /* 用户栈的大小 */
 
+/* 进程状态 */
+#define TASK_RUNNING		    (1 << 0)        /* 可运行状态 */
+#define TASK_INTERRUPTIBLE	    (1 << 1)        /* 可中断睡眠状态 */
+#define	TASK_UNINTERRUPTIBLE	(1 << 2)        /* 不可中断睡眠状态 */
+#define	TASK_ZOMBIE		        (1 << 3)        /* 僵尸状态 */
+#define	TASK_STOPPED		    (1 << 4)        /* 停止状态 */
+
+/* 进程优先级 */
+#define  LOWEST_PRIO            9999            /* 进程的最低优先级 */
+
 struct task_struct
 {
     volatile long state;    /* 进程状态，-1不可运行，0可运行 */
@@ -63,15 +73,17 @@ struct task_struct
     void *stack;            /* 用户栈 */
     pid_t pid;              /* 进程id */
     unsigned short prio;    /* 进程优先级 */
-    unsigned long  count;   /* 上下文切换计数 */
+    unsigned long  counter; /* 进程可用时间片 */
 
     char comm[TASK_COMM_LEN];           /* 进程名称 */
 
     struct task_struct *parent;         /* 父进程 */
-    struct task_struct *children;       /* 子进程 */
+    struct list_head children;          /* 子进程链表 */
 
-    /* cpu的上下文信息 */
-    struct thread_struct thread;
+    struct thread_struct thread;        /* cpu的上下文信息 */
+    struct mm_struct *mm;               /* 内存空间分布 */
+
+    long signal;            /* 进程持有的信号 */
 
     struct list_head task;
 
@@ -91,8 +103,9 @@ extern struct task_struct *idle;
 union task_union
 {
     struct task_struct task;
-    u8 stack[KERNEL_STACK_SIZE];    /* 内核栈 */
-};
+    unsigned long stack[KERNEL_STACK_SIZE / sizeof(unsigned long)];
+} __attribute__((aligned(8))) ;
+
 
 /**
  * 获取当前内核栈的栈底，减8是防止i386下没有内核栈的切换时访问ss和esp寄存器引发缺页异常

@@ -18,18 +18,31 @@ void sys_fork(void)
     struct pt_regs *regs;
     struct syscall_args_struct args;
 
-    curr = current();
+    curr = current;
     regs = get_pt_regs(curr);
     get_syscall_args(&args, regs);
 
     new = alloc_page(0, 1);
-    new->stack = alloc_page(0, 1);             /* 分配用户栈 */
+    new->state = TASK_RUNNING;
+    new->flags = curr->flags;
+
+    new->stack = alloc_page(0, 1);
     new->pid = generate_pid();
+    new->counter = curr->counter;
+
     memcpy(new->stack, curr->stack, USER_STACK_SIZE);
 
+    new->parent = curr;
+    list_head_init(&new->children);
+
     copy_process(new, regs);
+    new->mm = NULL;
+
+    new->signal = 0;
 
     list_add_tail(&new->task, &task_head);
+
+    list_add(&new->task, &curr->children);
 
     args.arg0 = new->pid;
     set_syscall_args(&args, regs);

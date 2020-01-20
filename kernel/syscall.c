@@ -11,7 +11,7 @@ syscall syscall_table[SYS_CALL_SIZE];
 void sys_get_ticks(void)
 {
     struct syscall_args_struct args;
-    struct task_struct * task = current();
+    struct task_struct * task = current;
     struct pt_regs * regs = get_pt_regs(task);
     get_syscall_args(&args, regs);
 
@@ -27,7 +27,7 @@ void sys_write(void)
     void *buf;
     size_t n;
     struct syscall_args_struct args;
-    struct task_struct * task = current();
+    struct task_struct * task = current;
     struct pt_regs * regs = get_pt_regs(task);
 
     get_syscall_args(&args, regs);
@@ -50,7 +50,7 @@ void sys_read(void)
     int fd;
     size_t n;
     struct syscall_args_struct args;
-    struct task_struct * task = current();
+    struct task_struct * task = current;
     struct pt_regs * regs = get_pt_regs(task);
     get_syscall_args(&args, regs);
 
@@ -69,11 +69,10 @@ void sys_read(void)
 void sys_getpid(void)
 {
     struct syscall_args_struct args;
-    struct task_struct * task = current();
-    struct pt_regs * regs = get_pt_regs(task);
+    struct pt_regs * regs = get_pt_regs(current);
     get_syscall_args(&args, regs);
 
-    args.arg0 = current()->pid;
+    args.arg0 = current->pid;
 
     set_syscall_args(&args, regs);
 }
@@ -81,7 +80,7 @@ void sys_getpid(void)
 
 void sys_debug(void)
 {
-    struct task_struct *p = current();
+    struct task_struct *p = current;
     struct pt_regs *regs = get_pt_regs(p);
     printk("%x pid: %d esp0: %x esp: %x\n", (u32)p, p->pid, p->thread.esp0, regs->esp);
 }

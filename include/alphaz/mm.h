@@ -3,6 +3,10 @@
 
 #include <alphaz/type.h>
 
+struct mm_struct {
+    unsigned long *pgd;
+};
+
 /* 内存信息所在的地址，跟loader中的一致 */
 #define MEM_INFO_ADDR   0x600
 

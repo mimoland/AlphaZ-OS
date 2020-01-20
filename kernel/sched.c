@@ -44,15 +44,6 @@ static inline void ticks_plus(void)
 
 
 /**
- * 获取当前进程的进程控制块指针
- */
-struct task_struct * current(void)
-{
-    return __current();
-}
-
-
-/**
  * 获取当前进程的cpu上下文
  */
 struct pt_regs * get_pt_regs(struct task_struct *task)
@@ -85,6 +76,7 @@ void schedule(void)
     list_del(&prev->task);
     list_add_tail(&prev->task, &task_head);
     next = list_first_entry(&task_head, struct task_struct, task);
+    next->counter = 1;
     context_switch(prev, next);
 }
 
@@ -95,33 +87,40 @@ void schedule(void)
 void do_timer(void)
 {
     ticks_plus();
+    current->counter--;
+    if(current->counter > 0) {
+        return;
+    }
     schedule();
 }
 
 
 /**
- * 初始化任务链表的头结点
+ * 创建idle进程
  */
-static void init_task_head(void)
-{
-    list_head_init(&task_head);
-}
-
-
-/**
- * 创建init进程
- */
-static void setup_zero_process(void)
+static void setup_idle_process(void)
 {
     /* 其中包括内核栈 */
     struct task_struct *ts = (struct task_struct *)alloc_page(0, 1);
+    memset(ts, 0, sizeof(struct task_struct));
 
-    ts->pid = 0;
+    ts->state = TASK_RUNNING;
+    ts->flags = 0;
+
     ts->stack = alloc_page(0, 1);
-    ts->count = 1;
-    strcpy(ts->comm, "Zero Process");
+    ts->pid = 0;
+    ts->prio = LOWEST_PRIO;
+    ts->counter = 1;
+
+    strcpy(ts->comm, "idle");
+
+    ts->parent = NULL;
+    list_head_init(&ts->children);
+
     ts->thread.esp0 = (u32)kernel_stack_top(ts);
     ts->thread.esp = (u32)user_stack_top(ts);
+    ts->mm = NULL;
+    ts->signal = 0;
 
     idle = ts;
 
@@ -138,9 +137,7 @@ static void setup_zero_process(void)
  */
 void task_init(void)
 {
-    // init_ticks();
+    list_head_init(&task_head);
     setup_counter();
-    init_task_head();
-    /**/
-    setup_zero_process();
+    setup_idle_process();
 }
