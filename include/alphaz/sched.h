@@ -10,6 +10,7 @@
 
 #define __ticks_data __attribute__((section(".data")))
 #define __pid_data  __attribute__((section(".data")))
+#define __sched __attribute__((section(".sched.text")))
 
 #define current __current()
 
@@ -74,6 +75,7 @@ struct task_struct
     pid_t pid;              /* 进程id */
     unsigned short prio;    /* 进程优先级 */
     unsigned long  counter; /* 进程可用时间片 */
+    unsigned long  alarm;   /* 滴答数定时器 */
 
     char comm[TASK_COMM_LEN];           /* 进程名称 */
 

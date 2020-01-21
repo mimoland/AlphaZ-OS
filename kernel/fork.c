@@ -29,6 +29,7 @@ void sys_fork(void)
     new->stack = alloc_page(0, 1);
     new->pid = generate_pid();
     new->counter = curr->counter;
+    new->alarm = curr->alarm;
 
     memcpy(new->stack, curr->stack, USER_STACK_SIZE);
 

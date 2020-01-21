@@ -31,6 +31,12 @@ ssize_t write(int fd, const void *buf, size_t n);
 
 ssize_t read(int fd, const void *buf, size_t n);
 
+pid_t getpid(void);
+
+void sleep(unsigned long second);
+
+void msleep(unsigned long ms);
+
 void debug(void);
 
 #endif

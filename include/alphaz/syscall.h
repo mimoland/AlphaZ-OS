@@ -43,6 +43,7 @@ void sys_fork(void);
 void sys_write(void);
 void sys_read(void);
 void sys_getpid(void);
+void sys_sleep(void);
 void sys_debug(void);
 
 /**
@@ -54,5 +55,7 @@ extern pid_t fork(void);
 extern ssize_t write(int fd, const void *buf, size_t n);
 extern ssize_t read(int fd, const void *buf, size_t n);
 extern pid_t getpid(void);
+extern void sleep(unsigned long second);
+extern void msleep(unsigned long ms);
 extern void debug(void);
 #endif

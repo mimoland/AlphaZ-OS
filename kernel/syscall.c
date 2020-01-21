@@ -96,6 +96,7 @@ static inline void setup_syscall_table(void)
     syscall_table[__NR_read] = sys_read;
     syscall_table[__NR_write] = sys_write;
     syscall_table[__NR_getpid] = sys_getpid;
+    syscall_table[__NR_sleep] = sys_sleep;
 
     syscall_table[__NR_debug] = sys_debug;
 }

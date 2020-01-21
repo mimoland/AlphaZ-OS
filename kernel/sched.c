@@ -7,6 +7,7 @@
 #include <alphaz/malloc.h>
 #include <alphaz/string.h>
 #include <alphaz/kernel.h>
+#include <alphaz/syscall.h>
 #include <alphaz/tty.h>
 
 #include <asm/system.h>
@@ -42,6 +43,20 @@ static inline void ticks_plus(void)
     ticks++;
 }
 
+static inline void update_alarm(void)
+{
+    struct task_struct *p;
+
+    list_for_each_entry(p, &task_head, task) {
+        if (p->alarm == 0) {
+            continue;
+        }
+        --p->alarm;
+        if (p->alarm == 0) {
+            p->state = TASK_RUNNING;
+        }
+    }
+}
 
 /**
  * 获取当前进程的cpu上下文
@@ -55,7 +70,7 @@ struct pt_regs * get_pt_regs(struct task_struct *task)
 }
 
 
-static struct task_struct *
+static struct task_struct * __sched
 context_switch(struct task_struct *prev, struct task_struct *next)
 {
     switch_to(prev, next, prev);
@@ -66,18 +81,26 @@ context_switch(struct task_struct *prev, struct task_struct *next)
 /**
  * schedule是进程的调度器，该方法在就绪进程队列中选出一个进程进行切换
  * 当前进程的调度并不涉及优先级和运行时间的一系列复杂因素，仅仅是将时间片消耗完的进程
- * 移到队尾，然后选下一个进程作为可运行的进程
+ * 移到队尾，然后选出进程状态为TASK_RUNNING的进程作为下一个的进程
  */
-void schedule(void)
+void __sched schedule(void)
 {
-    struct task_struct *prev, *next;
+    struct task_struct *prev, *next, *p;
 
-    prev = list_first_entry(&task_head, struct task_struct, task);
+    prev = current;
+    next = NULL;
+
     list_del(&prev->task);
     list_add_tail(&prev->task, &task_head);
-    next = list_first_entry(&task_head, struct task_struct, task);
+    list_for_each_entry(p, &task_head, task) {
+        if (p->state == TASK_RUNNING) {
+            next = p;
+            break;
+        }
+    }
+    if (!next) next = idle;
     next->counter = 1;
-    context_switch(prev, next);
+    prev = context_switch(prev, next);
 }
 
 
@@ -87,13 +110,53 @@ void schedule(void)
 void do_timer(void)
 {
     ticks_plus();
-    current->counter--;
-    if(current->counter > 0) {
-        return;
-    }
+    update_alarm();
     schedule();
 }
 
+
+/**
+ * sys_sleep - 进程睡眠
+ * 该进程实现了秒级睡眠和毫秒级睡眠的中断处理，对应sleep和msleep两个系统调用的用户态接口，根
+ * 据第一个参数的类型，来确定使用哪种类型的睡眠, 时间精度位10ms
+ */
+void __sched sys_sleep(void)
+{
+    struct syscall_args_struct args;
+    struct pt_regs * regs = get_pt_regs(current);
+    get_syscall_args(&args, regs);
+
+    unsigned long type = args.arg1;
+    unsigned long t = args.arg2;
+
+    if (type == 0) {
+        current->alarm = t * HZ;
+    } else if (type == 1) {
+        current->alarm = t / (1000 / HZ);
+    } else {
+        printk("sys_sleep error\n");
+        return;
+    }
+    current->state = TASK_INTERRUPTIBLE;
+    schedule();
+}
+
+/**
+ * 不可中断进程睡眠
+ */
+// void sleep_on(wait_queue_head_t *wq)
+// {
+
+// }
+
+
+/**
+ * 可中断进程睡眠
+ */
+// void interruptible_sleep_on(wait_queue_head_t *wq)
+// {
+
+// }
 
 /**
  * 创建idle进程
@@ -111,6 +174,7 @@ static void setup_idle_process(void)
     ts->pid = 0;
     ts->prio = LOWEST_PRIO;
     ts->counter = 1;
+    ts->alarm = 0;
 
     strcpy(ts->comm, "idle");
 
@@ -138,6 +202,7 @@ static void setup_idle_process(void)
 void task_init(void)
 {
     list_head_init(&task_head);
+    // fix me: 为什么要先初始化时钟中断，先初始化idle进程却不行
     setup_counter();
     setup_idle_process();
 }

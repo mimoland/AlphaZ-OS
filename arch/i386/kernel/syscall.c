@@ -94,6 +94,31 @@ pid_t getpid(void)
 }
 
 
+void sleep(unsigned long second)
+{
+    int d0, d1, d2;
+    d0 = __NR_sleep;
+    d1 = 0;
+    d2 = second;
+    asm volatile(
+        "int $0x80\n\t"
+        :"=&a"(d0), "=&b"(d1), "=&c"(d2)
+        :"0"(d0), "1"(d1), "2"(d2));
+}
+
+void msleep(unsigned long ms)
+{
+    int d0, d1, d2;
+    d0 = __NR_sleep;
+    d1 = 1;
+    d2 = ms;
+    asm volatile(
+        "int $0x80\n\t"
+        :"=&a"(d0), "=&b"(d1), "=&c"(d2)
+        :"0"(d0), "1"(d1), "2"(d2));
+}
+
+
 void debug(void)
 {
     int d0 = __NR_debug;
