@@ -41,17 +41,17 @@ static inline void * memset(void *from, u8 value, size_t n)
 #define __HAVE_ARCH_STRCPY
 static inline void * strcpy(char *dest, const char *src)
 {
-    u32 d0, d1;
+    int d0, d1;
     asm volatile(
         "1:"
         "movb (%%esi), %%al\n\t"
         "movb %%al, (%%edi)\n\t"
         "inc %%esi\n\t"
         "inc %%edi\n\t"
-        "cmp %%al, 0\n\t"
+        "cmp $0, %%al\n\t"
         "jnz 1b\n\t"
         : "=&D"(d0), "=&S"(d1)
-        : "0"((u32)dest), "1"((u32)src)
+        : "0"((unsigned long)dest), "1"((unsigned long)src)
         : "%eax", "memory");
 
     return dest;
@@ -75,5 +75,26 @@ static inline size_t strlen(const char *s)
     return (size_t)d0;
 }
 
+
+#define __HAVA_ARCH_STRCMP
+static inline int strcmp(const char *str1, const char *str2)
+{
+    int d0, d1, d2;
+    asm volatile(
+        "0:\t lodsb\n\t"
+        "scasb\n\t"
+        "jne 1f\n\t"
+        "testb %%al, %%al\n\t"
+        "jne 0b\n\t"
+        "xorl %%eax, %%eax\n\t"
+        "jmp 2f\n\t"
+        "1:\t sbbl %%eax, %%eax\n\t"
+        "orb $1, %%al\n\t"
+        "2:\t"
+        :"=a"(d0), "=&S"(d1), "=&D"(d2)
+        :"1"(str1), "2"(str2)
+        :"memory");
+    return d0;
+}
 
 #endif

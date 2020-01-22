@@ -25,6 +25,7 @@ void kernel_main()
     syscall_init();
     mm_init();
     keyboard_init();
+    shell_init();
     task_init();
 
     cls_screen();

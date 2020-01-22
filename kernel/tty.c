@@ -4,6 +4,7 @@
 #include <alphaz/stdio.h>
 #include <alphaz/syscall.h>
 #include <alphaz/keyboard.h>
+#include <alphaz/string.h>
 #include <asm/bug.h>
 #include <asm/irq.h>
 #include <asm/tty.h>
@@ -15,6 +16,28 @@ struct command_buf {
     int tail;
 };
 
+typedef int (*shell_func)(int argc, char *argv[]);
+
+struct shell {
+    char name[128];
+    shell_func func;
+};
+
+#define SHELL_SIZE  32
+struct shell shells[SHELL_SIZE];
+
+static int shell_help(int argc, char *argv[])
+{
+    printf(" shell help:\n");
+    printf("  reboot - reboot system\n\n");
+    return 0;
+}
+
+static int shell_reboot(int argc, char *argv[])
+{
+    reboot();
+    return 0;
+}
 
 static void print_info(void)
 {
@@ -25,7 +48,9 @@ static void print_info(void)
 "                    Welcome to use AlphaZ OS (develpment)                       "
 "                          Copyright(C)  lml 2020                                "
 "                                                                                "
-"================================================================================\n";
+"================================================================================"
+"                                                                                "
+"enter 'help' for more infomation                                                \n";
 
     char *p;
 
@@ -36,12 +61,22 @@ static void print_info(void)
 }
 
 
-static void command_print(struct command_buf *buf)
+static void command_exec(struct command_buf *buf)
 {
+    int i;
+
     if (buf->tail == 0)
         return;
     buf->buf[buf->tail] = 0;
-    printf("You enter the command: '%s', but no operation\n\n", buf->buf);
+
+    for (i = 0; i < SHELL_SIZE; i++) {
+        if (strcmp(buf->buf, shells[i].name) == 0) {
+            shells[i].func(1, NULL);
+            goto end;
+        }
+    }
+    printf(" '%s' Bad command or filename\n\n", buf->buf, buf->buf);
+    end:
     buf->tail = 0;
 }
 
@@ -53,6 +88,16 @@ static void command_add(struct command_buf *buf, char c)
     }
 }
 
+void shell_init(void)
+{
+    // memset(shells, 0, sizeof(shells));
+
+    strcpy(shells[0].name, "help");
+    shells[0].func = shell_help;
+
+    strcpy(shells[1].name, "reboot");
+    shells[1].func = shell_reboot;
+}
 
 /**
  * tty_write - tty写
@@ -83,7 +128,7 @@ void tty_task(void)
         if (read(STDIN_FILENO, &code, 1)) {
             if (code == '\n') {
                 printf("\n");
-                command_print(&buf);
+                command_exec(&buf);
                 printf("sh:>");
             } else {
                 printf("%c", code);

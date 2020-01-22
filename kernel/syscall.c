@@ -3,6 +3,7 @@
 #include <alphaz/tty.h>
 #include <alphaz/kernel.h>
 #include <alphaz/keyboard.h>
+#include <asm/syscall.h>
 #include <asm/unistd.h>
 
 syscall syscall_table[SYS_CALL_SIZE];
@@ -51,6 +52,11 @@ void sys_getpid(void)
 }
 
 
+void sys_reboot(void)
+{
+    __sys_reboot();
+}
+
 void sys_debug(void)
 {
     struct task_struct *p = current;
@@ -71,6 +77,7 @@ static inline void setup_syscall_table(void)
     syscall_table[__NR_getpid] = sys_getpid;
     syscall_table[__NR_sleep] = sys_sleep;
 
+    syscall_table[__NR_reboot] = sys_reboot;
     syscall_table[__NR_debug] = sys_debug;
 }
 

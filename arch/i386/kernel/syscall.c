@@ -3,6 +3,16 @@
 #include <asm/unistd.h>
 #include <asm/syscall.h>
 #include <asm/cpu.h>
+#include <asm/io.h>
+
+/**
+ * __sys_reboot - 系统重启
+ * 0x64为Intel 8042键盘控制器所使用的端口，通过拉低8042 port2的pin0引脚可使得系统重启
+ */
+void __sys_reboot(void)
+{
+    outb(0x64, 0xfe);
+}
 
 /**
  * __syscall - 用户态系统调用的总入口
@@ -76,6 +86,10 @@ void msleep(unsigned long ms)
     __syscall(__NR_sleep, 2, (unsigned long)1, ms);
 }
 
+void reboot(void)
+{
+    __syscall(__NR_reboot, 0);
+}
 
 void debug(void)
 {

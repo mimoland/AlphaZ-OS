@@ -19,4 +19,8 @@ extern void * strcpy(char *dest, const char *src);
 extern size_t strlen(const char *s);
 #endif
 
+#ifndef __HAVA_ARCH_STRCMP
+extern int strcmp(const char *str1, const char *str2)
+#endif
+
 #endif

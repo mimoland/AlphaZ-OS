@@ -8,6 +8,7 @@
 #define __NR_write      4
 #define __NR_getpid     20
 #define __NR_sleep      21
+#define __NR_reboot     30
 #define __NR_debug      31
 
 #endif

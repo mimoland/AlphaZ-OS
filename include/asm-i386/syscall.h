@@ -27,6 +27,8 @@
     _regs->eax = (unsigned long)r;                  \
 } while (0)
 
+void __sys_reboot(void);
+
 unsigned long __syscall(int no, int n, ...);
 
 /* 系统调用接口 */
@@ -43,6 +45,8 @@ pid_t getpid(void);
 void sleep(unsigned long second);
 
 void msleep(unsigned long ms);
+
+void reboot(void);
 
 void debug(void);
 
