@@ -1,26 +1,33 @@
 #ifndef _ASM_SYSCALL_H_
 #define _ASM_SYSCALL_H_
 
-#include <alphaz/syscall.h>
+#include <alphaz/type.h>
 #include <asm/cpu.h>
 
-#ifndef __SYSCALL_ARGS_STRUCT
-#define __SYSCALL_ARGS_STRUCT
-struct syscall_args_struct
-{
-    unsigned long arg0;     /* 系统调用号，或第一个返回的参数 */
-    unsigned long arg1;     /* 第一个参数，或第二个返回的参数 */
-    unsigned long arg2;
-    unsigned long arg3;
-    unsigned long arg4;
-    unsigned long arg5;
-};
-#endif
+#define __SYSCALL_ARGS_1(a1)  do {                  \
+    struct pt_regs * _regs = get_pt_regs(current);  \
+    a1 = (typeof(a1))_regs->ebx;                    \
+} while (0)
 
-void get_syscall_args(struct syscall_args_struct *, struct pt_regs *);
+#define __SYSCALL_ARGS_2(a1, a2) do {               \
+    struct pt_regs * _regs = get_pt_regs(current);  \
+    a1 = (typeof(a1))_regs->ebx;                    \
+    a2 = (typeof(a2))_regs->ecx;                    \
+} while (0)
 
-void set_syscall_args(struct syscall_args_struct *, struct pt_regs *);
+#define __SYSCALL_ARGS_3(a1, a2, a3) do {           \
+    struct pt_regs * _regs = get_pt_regs(current);  \
+    a1 = (typeof(a1))_regs->ebx;                    \
+    a2 = (typeof(a2))_regs->ecx;                    \
+    a3 = (typeof(a3))_regs->edx;                    \
+} while (0)
 
+#define __SYSCALL_RETURN(r) do {                    \
+    struct pt_regs * _regs = get_pt_regs(current);  \
+    _regs->eax = (unsigned long)r;                  \
+} while (0)
+
+unsigned long __syscall(int no, int n, ...);
 
 /* 系统调用接口 */
 unsigned int get_ticks(void);

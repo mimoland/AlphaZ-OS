@@ -13,7 +13,6 @@
 #include <asm/system.h>
 #include <asm/sched.h>
 #include <asm/cpu.h>
-#include <asm/bug.h>
 
 
 /**
@@ -122,12 +121,8 @@ void do_timer(void)
  */
 void __sched sys_sleep(void)
 {
-    struct syscall_args_struct args;
-    struct pt_regs * regs = get_pt_regs(current);
-    get_syscall_args(&args, regs);
-
-    unsigned long type = args.arg1;
-    unsigned long t = args.arg2;
+    unsigned long type, t;
+    SYSCALL_ARGS_2(type, t);
 
     if (type == 0) {
         current->alarm = t * HZ;

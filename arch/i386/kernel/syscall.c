@@ -1,36 +1,33 @@
+#include <stdarg.h>
 #include <alphaz/type.h>
 #include <asm/unistd.h>
 #include <asm/syscall.h>
 #include <asm/cpu.h>
 
-
 /**
- * 根据cpu上下文获取系统调用的参数表
+ * __syscall - 用户态系统调用的总入口
+ * @no: 系统调用号
+ * @n:  系统调用的参数个数
+ * 注意，所有可变参数的参数类型长度必须为32位
  */
-void get_syscall_args(struct syscall_args_struct *sas,
-                        struct pt_regs *regs)
+unsigned long __syscall(int no, int n, ...)
 {
-    sas->arg0 = regs->eax;
-    sas->arg1 = regs->ebx;
-    sas->arg2 = regs->ecx;
-    sas->arg3 = regs->edx;
-    sas->arg4 = regs->esi;
-    sas->arg5 = regs->edi;
-}
+    unsigned long eax = no, reg[3] = {0, 0, 0};
+    va_list args;
+    int i;
 
+    va_start(args, n);
+    for (i = 0; i < n && i < 3; i++) {
+        reg[i] = va_arg(args, unsigned long);
+    }
+    va_end(args);
 
-/**
- * 设置系统调用的返回参数
- */
-void set_syscall_args(struct syscall_args_struct *sas,
-                        struct pt_regs *regs)
-{
-    regs->eax = sas->arg0;
-    regs->ebx = sas->arg1;
-    regs->ecx = sas->arg2;
-    regs->edx = sas->arg3;
-    regs->esi = sas->arg4;
-    regs->edi = sas->arg5;
+    asm volatile(
+        "int $0x80\n\t"
+        :"=a"(eax)
+        :"a"(eax), "b"(reg[0]), "c"(reg[1]), "d"(reg[2])
+        :"memory");
+    return eax;
 }
 
 
@@ -39,91 +36,48 @@ void set_syscall_args(struct syscall_args_struct *sas,
  */
 unsigned int get_ticks(void)
 {
-    u32 d0 = __NR_getticks;
-    asm volatile(
-        "int $0x80\n\t"
-        :"=&a"(d0)
-        :"0"(d0));
-    return d0;
+    return __syscall(__NR_getticks, 0);
 }
 
 
 pid_t fork(void)
 {
-    int d0 = __NR_fork;
-    asm volatile(
-        "int $0x80\n\t"
-        :"=&a"(d0)
-        :"0"(d0));
-    return d0;
+    return __syscall(__NR_fork, 0);
 }
 
 
 ssize_t write(int fd, const void *buf, size_t n)
 {
-    u32 d0, d1, d2, d3;
-    d0 = __NR_write;
-    asm volatile(
-        "int $0x80\n\t"
-        :"=&a"(d0), "=&b"(d1), "=&c"(d2), "=&d"(d3)
-        :"0"(d0), "1"(fd), "2"((u32)buf), "3"(n));
-    return d0;
+    return __syscall(__NR_write, 3, (unsigned long)fd,
+                        (unsigned long)buf, (unsigned long)n);
 }
 
 
 ssize_t read(int fd, const void *buf, size_t n)
 {
-    u32 d0, d1, d2, d3;
-    d0 = __NR_read;
-    asm volatile(
-        "int $0x80\n\t"
-        :"=&a"(d0), "=&b"(d1), "=&c"(d2), "=&d"(d3)
-        :"0"(d0), "1"(fd), "2"((u32)buf), "3"(n));
-    return d0;
+    return __syscall(__NR_read, 3, (unsigned long)fd,
+                        (unsigned long)buf, (unsigned long)n);
 }
 
 
 pid_t getpid(void)
 {
-    int d0 = __NR_getpid;
-    asm volatile(
-        "int $0x80\n\t"
-        :"=&a"(d0)
-        :"0"(d0));
-    return d0;
+    return __syscall(__NR_getpid, 0);
 }
 
 
 void sleep(unsigned long second)
 {
-    int d0, d1, d2;
-    d0 = __NR_sleep;
-    d1 = 0;
-    d2 = second;
-    asm volatile(
-        "int $0x80\n\t"
-        :"=&a"(d0), "=&b"(d1), "=&c"(d2)
-        :"0"(d0), "1"(d1), "2"(d2));
+    __syscall(__NR_sleep, 2, (unsigned long)0, second);
 }
 
 void msleep(unsigned long ms)
 {
-    int d0, d1, d2;
-    d0 = __NR_sleep;
-    d1 = 1;
-    d2 = ms;
-    asm volatile(
-        "int $0x80\n\t"
-        :"=&a"(d0), "=&b"(d1), "=&c"(d2)
-        :"0"(d0), "1"(d1), "2"(d2));
+    __syscall(__NR_sleep, 2, (unsigned long)1, ms);
 }
 
 
 void debug(void)
 {
-    int d0 = __NR_debug;
-    asm volatile(
-        "int $0x80\n\t"
-        :"=&a"(d0)
-        :"0"(d0));
+    __syscall(__NR_debug, 0);
 }

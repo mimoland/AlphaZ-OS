@@ -9,19 +9,10 @@
 #define STDERR_FILENO       2
 
 
-#ifndef __SYSCALL_ARGS_STRUCT
-#define __SYSCALL_ARGS_STRUCT
-struct syscall_args_struct
-{
-    unsigned long arg0;     /* 系统调用号，或第一个返回的参数 */
-    unsigned long arg1;     /* 第一个参数，或第二个返回的参数 */
-    unsigned long arg2;
-    unsigned long arg3;
-    unsigned long arg4;
-    unsigned long arg5;
-};
-#endif
-
+#define SYSCALL_ARGS_1(a1)              __SYSCALL_ARGS_1(a1)
+#define SYSCALL_ARGS_2(a1, a2)          __SYSCALL_ARGS_2(a1, a2)
+#define SYSCALL_ARGS_3(a1, a2, a3)      __SYSCALL_ARGS_3(a1, a2, a3)
+#define SYSCALL_RETURN(r)               __SYSCALL_RETURN(r)
 
 void syscall_init(void);
 

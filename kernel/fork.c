@@ -16,11 +16,9 @@ void sys_fork(void)
 {
     struct task_struct *curr, *new;
     struct pt_regs *regs;
-    struct syscall_args_struct args;
 
     curr = current;
     regs = get_pt_regs(curr);
-    get_syscall_args(&args, regs);
 
     new = alloc_page(0, 1);
     new->state = TASK_RUNNING;
@@ -45,6 +43,5 @@ void sys_fork(void)
 
     list_add(&new->sibling, &curr->children);
 
-    args.arg0 = new->pid;
-    set_syscall_args(&args, regs);
+    SYSCALL_RETURN(new->pid);
 }
