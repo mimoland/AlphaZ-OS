@@ -117,7 +117,7 @@ extern void hwint10();
 extern void hwint11();
 extern void hwint12();
 extern void hwint13();
-extern void hwint14();
+extern void disk_interrupt();
 extern void hwint15();
 
 

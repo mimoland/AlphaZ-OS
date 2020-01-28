@@ -34,13 +34,26 @@ align  16
 %endmacro
 
 
-; 关闭8259从片相关引脚
+; 开启8259主片相关引脚
 %macro OPEN_CHIP_M 1
 	in 	al, 0x21
 	and 	al, ~(1 << %1)
 	out 	0x21, al
 %endmacro
 
+; 关闭8259从片相关引脚
+%macro CLOSE_CHIP_S 1
+	in 	al, 0xa1
+	or 	al, (1 << %1)
+	out 	0xa1, al
+%endmacro
+
+; 开启8259从片相关引脚
+%macro OPEN_CHIP_S 1
+	in 	al, 0xa1
+	and 	al, ~(1 << %1)
+	out 	0xa1, al
+%endmacro
 
 ; 8259复位
 %macro RESET_CHIP 0
@@ -155,9 +168,16 @@ ENTRY hwint13
 
 
 ; Interrupt routine for irq 14 (AT winchester)
-ENTRY hwint14
-        hwint_slave     14
-
+extern disk_handler
+ENTRY disk_interrupt
+        SAVE_ALL
+	CLOSE_CHIP_S 6
+	RESET_CHIP
+	sti
+	call	disk_handler
+	cli
+	OPEN_CHIP_S 6
+	POP_AND_RET
 
 
 ENTRY hwint15

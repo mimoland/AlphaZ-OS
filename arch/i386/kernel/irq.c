@@ -70,7 +70,7 @@ static inline void setup_hwint_desc(void)
     init_idt_desc(INT_VECTOR_IRQ8 + 3, DA_386IGate, hwint11, RING0);
     init_idt_desc(INT_VECTOR_IRQ8 + 4, DA_386IGate, hwint12, RING0);
     init_idt_desc(INT_VECTOR_IRQ8 + 5, DA_386IGate, hwint13, RING0);
-    init_idt_desc(INT_VECTOR_IRQ8 + 6, DA_386IGate, hwint14, RING0);
+    init_idt_desc(INT_VECTOR_IRQ8 + 6, DA_386IGate, disk_interrupt, RING0);
     init_idt_desc(INT_VECTOR_IRQ8 + 7, DA_386IGate, hwint15, RING0);
 }
 
