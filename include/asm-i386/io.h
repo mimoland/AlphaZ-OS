@@ -25,6 +25,19 @@ static inline u8 inb(u16 port)
     return val;
 }
 
+/**
+ * innw - 从指定端口读取n个字
+ */
+static inline void innw(unsigned short port, const void *buf, size_t n)
+{
+    asm volatile(
+        "cld\n\t"
+        "rep; insw\n\t"
+        "mfence\n\t"
+        :
+        :"d"(port), "D"(buf), "c"(n)
+        :"memory");
+}
 
 static inline u32 readl(u32 addr)
 {
