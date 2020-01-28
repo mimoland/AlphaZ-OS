@@ -1,18 +1,35 @@
+config_interface: textconfig
+display_library: x
+
+# cpu: model=corei5_lynnfield_750
+cpu: count=1, ips=4000000, reset_on_triple_fault=1, ignore_bad_msrs=1, msrs="msrs.def"
+cpu: cpuid_limit_winnt=0
+# cpuid option has no offect if CPU model was selected in CPU option.
+# cpuid: x86_64=1, mmx=1, sep=1, simd=sse4_2, apic=xapic, aes=1, movbe=1, xsave=1
+# cpuid: family=6, model=0x1a, stepping=5
+
+# default memory size is 32MB
+# memory: guest=512, host=512
 megs: 32
 
-romimage: file=/usr/local/share/bochs/BIOS-bochs-latest
+romimage: file=$BXSHARE/BIOS-bochs-latest, options=fastboot
+vgaromimage: file=$BXSHARE/VGABIOS-lgpl-latest
+vga: extension=vbe, update_freq=5, realtime=1
+keyboard: type=mf, serial_delay=250, paste_delay=100000, user_shortcut=none
+mouse: enabled=0
 
-vgaromimage: file=/usr/local/share/bochs/VGABIOS-lgpl-latest
+clock: sync=realtime, time0=local
+private_colormap: enabled=0
 
 floppya: 1_44=a.img, status=inserted
 
+ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
+ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15
+ata2: enabled=0, ioaddr1=0x1e8, ioaddr2=0x3e0, irq=11
+ata3: enabled=0, ioaddr1=0x168, ioaddr2=0x360, irq=9
+ata0-master: type=disk, mode=flat, path="hd.img"
 boot: floppy
 
+pci: enabled=1, chipset=i440fx
+
 log: bochsout.txt
-
-mouse: enabled=0
-
-keyboard: keymap=/usr/local/share/bochs/keymaps/x11-pc-us.map
-
-clock: sync=realtime
-cpu: ips=1000000
