@@ -4,6 +4,8 @@
 *.log
 *.bin
 *.img
+*.vhd
+*.vhd.lock
 /.vscode
 build
 target
