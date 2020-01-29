@@ -39,6 +39,20 @@ static inline void innw(unsigned short port, const void *buf, size_t n)
         :"memory");
 }
 
+/**
+ * outnw - 向指定端写n个字
+ */
+static inline void outnw(unsigned short port, const void *buf, size_t n)
+{
+    asm volatile(
+        "cld\n\t"
+        "rep; outsw\n\t"
+        "mfence\n\t"
+        :
+        :"d"(port), "S"(buf), "c"(n)
+        :"memory");
+}
+
 static inline u32 readl(u32 addr)
 {
     u32 d0;
