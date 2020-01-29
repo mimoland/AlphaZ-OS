@@ -18,13 +18,51 @@
 #define	DISK_STATUS_REQ			(1 << 3)
 #define	DISK_STATUS_ERROR		(1 << 0)
 
-#define ATA_READ_CMD		    0x24
-#define ATA_WRITE_CMD		    0x34
+#define ATA_READ_CMD		    0x20    /* 28位LBA读 */
+#define ATA_WRITE_CMD		    0x30    /* 28位LBA写 */
 #define GET_IDENTIFY_DISK_CMD	0xEC
 
+#include <alphaz/list.h>
+
 void disk_init(void);
+void disk_exit(void);
+
 void disk_handler(void);
 
+struct __request_queue
+{
+    unsigned int count;
+    unsigned char cmd;
+    unsigned long LBA;
+    void *buf;
+    void (*end_handler)(void);
+    struct list_head list;
+};
+typedef struct __request_queue request_queue_t;
+
+struct __request_queue_head
+{
+    long count;
+    request_queue_t *use;
+    struct list_head list;
+};
+typedef struct __request_queue_head request_queue_head_t;
+
+#define INIT_REQUEST_QUEST_HEAD(head) do {     \
+    (head)->count = 0;                         \
+    (head)->use = NULL;                        \
+    list_head_init(&(head)->list);             \
+} while (0)
+
+struct block_device_operation
+{
+    long (*open)(void);
+    long (*close)(void);
+    long (*ioctl)(long cmd, long arg);
+    long (*transfer)(long cmd, unsigned long blocks, long count, void *buf);
+};
+
+extern struct block_device_operation IDE_device_operation;
 
 struct disk_identify_info_struct {
     //	0	General configuration bit-significant information
