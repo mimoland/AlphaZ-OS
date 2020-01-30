@@ -99,3 +99,7 @@ void TestB()
     }
 }
 
+inline void nop(void)
+{
+    asm volatile("nop");
+}

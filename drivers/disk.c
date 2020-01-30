@@ -138,6 +138,7 @@ static void write_handler(void)
     if (--r->nsect) {
         r->buf += SECTOR_SIZE;
         r->sector++;
+        while (!(inb(PORT_DISK0_STATUS_CMD) & DISK_STATUS_REQ)) nop();
         outnw(PORT_DISK0_DATA, r->buf, SECTOR_SIZE / 2);
         return;
     }
