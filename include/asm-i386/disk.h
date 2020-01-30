@@ -22,6 +22,8 @@
 #define ATA_WRITE_CMD		    0x30    /* 28位LBA写 */
 #define GET_IDENTIFY_DISK_CMD	0xEC
 
+#define SECTOR_SIZE             512
+
 #include <alphaz/list.h>
 
 void disk_init(void);
@@ -29,24 +31,24 @@ void disk_exit(void);
 
 void disk_handler(void);
 
-struct __request_queue
+struct request_queue
 {
-    unsigned int count;
+    unsigned char nsect;     /* 操作的扇区数量 */
     unsigned char cmd;
-    unsigned long LBA;
+    unsigned long sector;   /* 起始扇区，LBA28模式 */
     void *buf;
     void (*end_handler)(void);
     struct list_head list;
 };
-typedef struct __request_queue request_queue_t;
+typedef struct request_queue request_queue_t;
 
-struct __request_queue_head
+struct request_queue_head
 {
-    long count;
-    request_queue_t *use;
+    volatile unsigned long count;             /* 请求数量 */
+    request_queue_t *use;   /* 记录当前的请求 */
     struct list_head list;
 };
-typedef struct __request_queue_head request_queue_head_t;
+typedef struct request_queue_head request_queue_head_t;
 
 #define INIT_REQUEST_QUEST_HEAD(head) do {     \
     (head)->count = 0;                         \
@@ -54,15 +56,15 @@ typedef struct __request_queue_head request_queue_head_t;
     list_head_init(&(head)->list);             \
 } while (0)
 
-struct block_device_operation
+struct block_device_operations
 {
     long (*open)(void);
-    long (*close)(void);
+    long (*release)(void);
     long (*ioctl)(long cmd, long arg);
-    long (*transfer)(long cmd, unsigned long blocks, long count, void *buf);
+    long (*transfer)(long cmd, unsigned long sector, unsigned long count, void *buf);
 };
 
-extern struct block_device_operation IDE_device_operation;
+extern struct block_device_operations IDE_device_operation;
 
 struct disk_identify_info_struct {
     //	0	General configuration bit-significant information
