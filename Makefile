@@ -98,9 +98,16 @@ clean:
 	rm -rf $(target)
 PHONY += clean
 
+qemu:
+	qemu -fda a.img -hda alphaz.vhd -boot a
+PHONY += qemu
 
 debug:
-	@echo $(src-all)
+	@qemu -s -S -fda a.img -hda alphaz.vhd -boot a &
+	@gdb -x scripts/gdbinit
+	@kill $$(ps | grep qemu | awk '{print $$1 }')
+
+
 PHONY += debug
 
 # 下面定义一些通用的规则，为每个.o文件生成相应的源文件和头文件依赖。生成前必须要先对项目进行基
