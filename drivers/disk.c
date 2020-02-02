@@ -197,7 +197,7 @@ static request_queue_t * make_request(long cmd, unsigned long sector,
 
 static void put_request(request_queue_head_t *head, request_queue_t *r)
 {
-    list_add_tail(&head->list, &r->list);
+    list_add_tail(&r->list, &head->list);
     head->count++;
 }
 
