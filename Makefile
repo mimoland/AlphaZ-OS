@@ -7,12 +7,12 @@ MAKEFLAGS  += -rR --no-print-directory
 
 DEBUG = 1
 
-ASM			= nasm
+AS 			= as
 DASM		= ndisasm
 CC			= gcc
 LD			= ld
 AR 			= ar
-ASMKFLAGS	= -f elf
+ASFLAGS 	=
 CFLAGS		= -I include/ -c -O2 -Wall -fno-builtin -fno-common \
 				-fno-stack-protector
 LDFLAGS		= -Ttext $(ENTRYPOINT) --whole-archive
@@ -20,8 +20,8 @@ ARFLAGS		= -rc
 DASMFLAGS	=
 PHONY		:= _all
 
-export ASM DASM CC LD AR
-export ASMBFLAGS ASMKFLAGS CFLAGS LDFLAGS ARFLAGS DASMFLAGS
+export AS DASM CC LD AR
+export ASFLAGS CFLAGS LDFLAGS ARFLAGS DASMFLAGS
 export PHONY
 
 # 欲生成平台的处理器架构
@@ -29,6 +29,7 @@ ARCH		?= i386
 export ARCH
 
 ifeq ($(ARCH), i386)
+	ASFLAGS += --32
 	CFLAGS += -m32
 	LDFLAGS += -m elf_i386
 endif
@@ -68,7 +69,8 @@ src-all += $(src-mm)
 include kernel/Makefile
 src-all += $(src-kernel)
 
-all: config $(target)/kernel.bin $(boot)
+all: config $(target)/kernel.bin
+	$(MAKE) -C arch/$(ARCH)/boot
 PHONY += all
 
 buildimg:
@@ -124,11 +126,9 @@ $(build)/%.d: %.c config
 
 -include $(addprefix $(build)/, $(patsubst %.c, %.d, $(filter %.c, $(src-all))))
 
-
-# 编译.asm文件的通用规则，由于.asm文件一般不使用头文件，所以编译方式比较简单。为了防止.asm编
-# 译生成的目标文件与.c的目标文件冲突，所以使用.oa后缀名
-$(build)/%.oa: %.asm
-	$(ASM) $(ASMKFLAGS) -o $@ $<
+$(build)/%.o: %.S
+	$(CC) $(CFLAGS) -E $< > $(addprefix $(build)/, $(patsubst %.S, %.s, $<))
+	$(AS) $(ASFLAGS) -o $@ $(addprefix $(build)/, $(patsubst %.S, %.s, $<))
 
 
 .PHONY = $(PHONY)
