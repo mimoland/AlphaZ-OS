@@ -19,139 +19,90 @@
     popl    %fs;     \
     popl    %es;     \
     popl    %ds;     \
-    popal;           \
+    popal
+
+#define INTERRUPT_RETURN     \
+    addl    $4, %esp;        \
     iretl
 
-#define CLOSE_CHIP_M(irq) \
-    inb     $0x21, %al;      \
-    orb     $(1<<irq), %al; \
-    outb    %al, $0x21
+#define PUSH_PT_ARGS    \
+    movl    %esp, %eax; \
+    pushl   %eax
 
-#define CLOSE_CHIP_S(irq) \
-    inb     $0xa1, %al;      \
-    orb     $(1<<irq), %al; \
-    outb    %al, $0xa1
+#define POP_PT_ARGS     \
+    addl    $4, %esp
 
-#define OPEN_CHIP_M(irq)  \
-    inb     $0x21, %al;      \
-    movb    $(1<<irq), %ah;  \
-    notb    %ah;         \
-    andb    %ah, %al; \
-    outb    %al, $0x21
-
-#define OPEN_CHIP_S(irq)  \
-    inb     $0xa1, %al;      \
-    movb    $(1<<irq), %ah;  \
-    notb    %ah;         \
-    andb    %ah, %al; \
-    outb    %al, $0xa1
-
-#define RESET_CHIP  \
-    movb    $0x20, %al; \
-    outb    %al, $0x20; \
+/* could not use stack */
+#define RESET_8259A_CHIP    \
+    movb    $0x20, %al;     \
+    outb    %al, $0x20;     \
     outb    %al, $0xa0
 
-#define hwint_master(irq)   \
-    pushl   $irq;            \
-    call   spurious_irq;   \
-    addl    $4, %esp ;       \
-    hlt
+/* could not use stack */
+#define CLOSE_8259A_PIN(irq)    \
+    movb    $8, %al;            \
+    cmpb    $irq, %al;          \
+    jl      1f;                 \
+    inb     $0x21, %al;         \
+    bts     $irq,  %ax;         \
+    outb    %al, $0x21;         \
+    jmp     2f;                 \
+  1:inb     $0xa1, %al;         \
+    bts     $(irq - 8), %ax;    \
+    outb    %al, $0xa1;         \
+  2: ;
 
-#define hwint_slave(irq)    \
-    pushl   $irq;    \
-    call   spurious_irq;    \
-    addl    $4, %esp;    \
-    hlt
+/* could not use stack */
+#define OPEN_8259A_PIN(irq)     \
+    movb    $8, %al;            \
+    cmpb    $irq, %al;          \
+    jl      1f;                 \
+    inb     $0x21, %al;         \
+    btr     $irq,  %ax;         \
+    outb    %al, $0x21;         \
+    jmp     2f;                 \
+  1:inb     $0xal, %al;         \
+    btr     $(irq - 8), %ax;    \
+    outb    %al, $0xa1;         \
+  2: ;
 
-ENTRY(timer_interrupt)
-    SAVE_ALL
-    CLOSE_CHIP_M(0)
-    RESET_CHIP
-    sti
-    call   do_timer
-    cli
-    OPEN_CHIP_M(0)
-    RESTOR_ALL
-END(timer_interrupt)
+#define RING0_HW_IRQ_FREAM(irq)    \
+    pushl $irq;                 \
+    SAVE_ALL;                   \
+    CLOSE_8259A_PIN(irq);       \
+    RESET_8259A_CHIP;           \
+    sti;                        \
+    PUSH_PT_ARGS;               \
+    call    do_IRQ;             \
+    POP_PT_ARGS;                \
+    cli;                        \
+    OPEN_8259A_PIN(irq);        \
+    RESTOR_ALL;                 \
+    INTERRUPT_RETURN;
 
 ENTRY(ret_from_fork)
     cli
-    OPEN_CHIP_M(0)
+    OPEN_8259A_PIN(0)
     RESTOR_ALL
+    INTERRUPT_RETURN
 END(ret_from_fork)
 
-ENTRY(hwint01)
-    SAVE_ALL
-    CLOSE_CHIP_M(1)
-    RESET_CHIP
-    call __keyboard_handle
-    OPEN_CHIP_M(1)
-    RESTOR_ALL
-END(hwint01)
-
-ENTRY(hwint02)
-    hwint_master(2)
-END(hwint02)
-
-ENTRY(hwint03)
-    hwint_master(3)
-END(hwint03)
-
-ENTRY(hwint04)
-    hwint_master(4)
-END(hwint04)
-
-ENTRY(hwint05)
-    hwint_master(5)
-END(hwint05)
-
-ENTRY(hwint06)
-    hwint_master(6)
-END(hwint06)
-
-ENTRY(hwint07)
-    hwint_master(7)
-END(hwint07)
-
-
-ENTRY(hwint08)
-    hwint_slave(8)
-END(hwint08)
-
-ENTRY(hwint09)
-    hwint_slave(9)
-END(hwint09)
-
-ENTRY(hwint10)
-    hwint_slave(10)
-END(hwint10)
-
-ENTRY(hwint11)
-    hwint_slave(11)
-END(hwint11)
-
-ENTRY(hwint12)
-    hwint_slave(12)
-END(hwint12)
-
-ENTRY(hwint13)
-    hwint_slave(13)
-END(hwint13)
-
-ENTRY(disk_interrupt)
-    SAVE_ALL
-    CLOSE_CHIP_S(6)
-    RESET_CHIP
-    sti
-    call   disk_handler
-    cli
-    OPEN_CHIP_S(6)
-    RESTOR_ALL
-END(disk_interrupt)
-
-ENTRY(hwint15)
-    hwint_slave(15)
-END(hwint15)
+ENTRY(hwint0x20) RING0_HW_IRQ_FREAM(0x20); END(hwint0x20)
+ENTRY(hwint0x21) RING0_HW_IRQ_FREAM(0x21); END(hwint0x21)
+ENTRY(hwint0x22) RING0_HW_IRQ_FREAM(0x22); END(hwint0x22)
+ENTRY(hwint0x23) RING0_HW_IRQ_FREAM(0x23); END(hwint0x23)
+ENTRY(hwint0x24) RING0_HW_IRQ_FREAM(0x24); END(hwint0x24)
+ENTRY(hwint0x25) RING0_HW_IRQ_FREAM(0x25); END(hwint0x25)
+ENTRY(hwint0x26) RING0_HW_IRQ_FREAM(0x26); END(hwint0x26)
+ENTRY(hwint0x27) RING0_HW_IRQ_FREAM(0x27); END(hwint0x27)
+ENTRY(hwint0x28) RING0_HW_IRQ_FREAM(0x28); END(hwint0x28)
+ENTRY(hwint0x29) RING0_HW_IRQ_FREAM(0x29); END(hwint0x29)
+ENTRY(hwint0x2a) RING0_HW_IRQ_FREAM(0x2a); END(hwint0x2a)
+ENTRY(hwint0x2b) RING0_HW_IRQ_FREAM(0x2b); END(hwint0x2b)
+ENTRY(hwint0x2c) RING0_HW_IRQ_FREAM(0x2c); END(hwint0x2c)
+ENTRY(hwint0x2d) RING0_HW_IRQ_FREAM(0x2d); END(hwint0x2d)
+ENTRY(hwint0x2e) RING0_HW_IRQ_FREAM(0x2e); END(hwint0x2e)
+ENTRY(hwint0x2f) RING0_HW_IRQ_FREAM(0x2f); END(hwint0x2f)
 
 /* 中断和异常 -- 异常 */
 ENTRY(divide_error)
@@ -245,17 +196,23 @@ ENTRY(copr_error)
 END(copr_error)
 
 exception:
-	call	exception_handler
-	addl	$8, %esp	/* 让栈顶指向 EIP，堆栈中从顶向下依次是：EIP、CS、EFLAGS */
-	hlt
+    SAVE_ALL
+    PUSH_PT_ARGS
+    cli
+	call	do_IRQ
+    hlt
 
 /* 系统调用入口 int 0x80
  * eax中为功能号
  */
 ENTRY(sys_call)
+    pushl   %eax
 	SAVE_ALL
+    PUSH_PT_ARGS
 	sti
-	call	*syscall_table(,%eax, 4)
+	call	do_IRQ
 	cli
-	RESTOR_ALL
+	POP_PT_ARGS
+    RESTOR_ALL
+    INTERRUPT_RETURN
 END(sys_call)

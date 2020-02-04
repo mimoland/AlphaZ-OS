@@ -1,15 +1,18 @@
 #include <alphaz/kernel.h>
+#include <alphaz/linkage.h>
+#include <asm/cpu.h>
 #include <asm/irq.h>
 #include <asm/cpu.h>
 #include <asm/i8259.h>
+#include <asm/syscall.h>
 
-struct gate_struct idt[IDT_SIZE];
+struct gate_struct idt[NR_IRQ];
 
 static inline void init_idt_desc(u8 vector, u8 desc_type,
-                                irq_handler handler, u8 privilege)
+                                irq_entry entry, u8 privilege)
 {
     struct gate_struct *p_gate = &idt[vector];
-    u32 base = (u32)handler;
+    u32 base = (u32)entry;
     p_gate->offset_low = base & 0xffff;
     p_gate->selector = SELECTOR_FLAT_C;
     p_gate->dcount = 0;
@@ -17,104 +20,89 @@ static inline void init_idt_desc(u8 vector, u8 desc_type,
     p_gate->offset_high = (base >> 16) & 0xffff;
 }
 
-static inline void setup_exception_desc(void)
+static void setup_irq(void)
 {
-    init_idt_desc(INT_VECTOR_DIVIDE,        DA_386IGate,
-                    divide_error,           RING0);
-    init_idt_desc(INT_VECTOR_DEBUG,         DA_386IGate,
-                    single_step_exception,  RING0);
-    init_idt_desc(INT_VECTOR_NMI,           DA_386IGate,
-                    nmi,                    RING0);
-    init_idt_desc(INT_VECTOR_BREAKPOINT,    DA_386IGate,
-                    breakpoint_exception,   RING3);
-    init_idt_desc(INT_VECTOR_OVERFLOW,      DA_386IGate,
-                    overflow,               RING3);
-    init_idt_desc(INT_VECTOR_BOUNDS,        DA_386IGate,
-                    bounds_check,           RING0);
-    init_idt_desc(INT_VECTOR_INVAL_OP,      DA_386IGate,
-                    inval_opcode,           RING0);
-    init_idt_desc(INT_VECTOR_COPROC_NOT,    DA_386IGate,
-                    copr_not_available,     RING0);
-    init_idt_desc(INT_VECTOR_DOUBLE_FAULT,  DA_386IGate,
-                    double_fault,           RING0);
-    init_idt_desc(INT_VECTOR_COPROC_SEG,    DA_386IGate,
-                    copr_seg_overrun,       RING0);
-    init_idt_desc(INT_VECTOR_INVAL_TSS,     DA_386IGate,
-                    inval_tss,              RING0);
-    init_idt_desc(INT_VECTOR_SEG_NOT,       DA_386IGate,
-                    segment_not_present,    RING0);
-    init_idt_desc(INT_VECTOR_STACK_FAULT,   DA_386IGate,
-                    stack_exception,        RING0);
-    init_idt_desc(INT_VECTOR_PROTECTION,    DA_386IGate,
-                    general_protection,     RING0);
-    init_idt_desc(INT_VECTOR_PAGE_FAULT,    DA_386IGate,
-                    page_fault,             RING0);
-    init_idt_desc(INT_VECTOR_COPROC_ERR,    DA_386IGate,
-                    copr_error,             RING0);
+    int i;
+    for (i = 0; i < NR_IRQ; i++) {
+        if (irq_array[i].state & IRQ_STATE_DEFINED)
+            init_idt_desc(irq_array[i].vector, DA_386IGate,
+                            irq_array[i].entry, irq_array[i].ring);
+    }
 }
-
-static inline void setup_hwint_desc(void)
-{
-    /* 8259a相关中断 */
-    init_idt_desc(INT_VECTOR_IRQ0 + 0, DA_386IGate, timer_interrupt, RING0);
-    init_idt_desc(INT_VECTOR_IRQ0 + 1, DA_386IGate, hwint01, RING0);
-    init_idt_desc(INT_VECTOR_IRQ0 + 2, DA_386IGate, hwint02, RING0);
-    init_idt_desc(INT_VECTOR_IRQ0 + 3, DA_386IGate, hwint03, RING0);
-    init_idt_desc(INT_VECTOR_IRQ0 + 4, DA_386IGate, hwint04, RING0);
-    init_idt_desc(INT_VECTOR_IRQ0 + 5, DA_386IGate, hwint05, RING0);
-    init_idt_desc(INT_VECTOR_IRQ0 + 6, DA_386IGate, hwint06, RING0);
-    init_idt_desc(INT_VECTOR_IRQ0 + 7, DA_386IGate, hwint07, RING0);
-    init_idt_desc(INT_VECTOR_IRQ8 + 0, DA_386IGate, hwint08, RING0);
-    init_idt_desc(INT_VECTOR_IRQ8 + 1, DA_386IGate, hwint09, RING0);
-    init_idt_desc(INT_VECTOR_IRQ8 + 2, DA_386IGate, hwint10, RING0);
-    init_idt_desc(INT_VECTOR_IRQ8 + 3, DA_386IGate, hwint11, RING0);
-    init_idt_desc(INT_VECTOR_IRQ8 + 4, DA_386IGate, hwint12, RING0);
-    init_idt_desc(INT_VECTOR_IRQ8 + 5, DA_386IGate, hwint13, RING0);
-    init_idt_desc(INT_VECTOR_IRQ8 + 6, DA_386IGate, disk_interrupt, RING0);
-    init_idt_desc(INT_VECTOR_IRQ8 + 7, DA_386IGate, hwint15, RING0);
-}
-
-
-static inline void setup_syscall_desc(void)
-{
-    init_idt_desc(INT_VECTOR_SYSCALL, DA_386IGate, sys_call, RING3);
-}
-
 
 static inline void setup_idtr(void)
 {
     static struct idtr_struct idtr;
-    idtr.len = IDT_SIZE * sizeof(struct gate_struct) - 1;
+    idtr.len = NR_IRQ * sizeof(struct gate_struct) - 1;
     idtr.base = (u32)&idt;
     asm volatile("lidt %0"::"m"(idtr));
 }
 
-
 void irq_init(void)
 {
     init_8259A();
-    setup_exception_desc();
-    setup_hwint_desc();
-    setup_syscall_desc();
+    setup_irq();
     setup_idtr();
 }
 
+asmlinkage void do_IRQ(struct pt_regs *regs)
+{
+    unsigned vector = regs->orig_eax;
+    printk("%d\n", vector);
+    irq_array[vector].handler(regs, vector);
+}
 
 /* 异常的统一处理函数 */
-void exception_handler(int vec_no, int err_code, int eip, int cs, int eflags)
+static void exception_handler(struct pt_regs *regs, unsigned nr)
 {
-    printk("Exception --> %d\n", vec_no);
-    printk("EFLAGS: 0x%x  CS: 0x%x  EIP: 0x%x", eflags, cs, eip);
-
-    if (err_code != 0xffffffff) {
-        printk("  Error Code: 0x%x", err_code);
-    }
-    printk("\n");
+    printk("Exception ---> %d\n", nr);
 }
-
 
 /* 硬件中断的统一处理函数 */
-void spurious_irq(int irq)
+static void spurious_irq(struct pt_regs *regs, unsigned nr)
 {
-    printk("spurious_irq: %d \n", irq);
+    printk("spurious_irq: %d\n", nr);
 }
+
+struct irq_struct irq_array[NR_IRQ] = {
+    /* 处理器异常 */
+    [0x00] = {.state = 0x01, .entry = divide_error,           .handler = exception_handler, .vector = 0x00, .ring = RING0 },
+    [0x01] = {.state = 0x01, .entry = single_step_exception,  .handler = exception_handler, .vector = 0x01, .ring = RING0 },
+    [0x02] = {.state = 0x01, .entry = nmi,                    .handler = exception_handler, .vector = 0x02, .ring = RING0 },
+    [0x03] = {.state = 0x01, .entry = breakpoint_exception,   .handler = exception_handler, .vector = 0x03, .ring = RING3 },
+    [0x04] = {.state = 0x01, .entry = overflow,               .handler = exception_handler, .vector = 0x04, .ring = RING3 },
+    [0x05] = {.state = 0x01, .entry = bounds_check,           .handler = exception_handler, .vector = 0x05, .ring = RING0 },
+    [0x06] = {.state = 0x01, .entry = inval_opcode,           .handler = exception_handler, .vector = 0x06, .ring = RING0 },
+    [0x07] = {.state = 0x01, .entry = copr_not_available,     .handler = exception_handler, .vector = 0x07, .ring = RING0 },
+    [0x08] = {.state = 0x01, .entry = double_fault,           .handler = exception_handler, .vector = 0x08, .ring = RING0 },
+    [0x09] = {.state = 0x01, .entry = copr_seg_overrun,       .handler = exception_handler, .vector = 0x09, .ring = RING0 },
+    [0x0a] = {.state = 0x01, .entry = inval_tss,              .handler = exception_handler, .vector = 0x0a, .ring = RING0 },
+    [0x0b] = {.state = 0x01, .entry = segment_not_present,    .handler = exception_handler, .vector = 0x0b, .ring = RING0 },
+    [0x0c] = {.state = 0x01, .entry = stack_exception,        .handler = exception_handler, .vector = 0x0c, .ring = RING0 },
+    [0x0d] = {.state = 0x01, .entry = general_protection,     .handler = exception_handler, .vector = 0x0d, .ring = RING0 },
+    [0x0e] = {.state = 0x01, .entry = page_fault,             .handler = exception_handler, .vector = 0x0e, .ring = RING0 },
+
+    [0x10] = {.state = 0x01, .entry = copr_error,             .handler = exception_handler, .vector = 0x10, .ring = RING0 },
+
+    /* 外部硬件中断 */
+    [0x20] = {.state = 0x01, .entry = hwint0x20, .handler = spurious_irq, .vector = 0x20, .ring = RING0},
+    [0x21] = {.state = 0x01, .entry = hwint0x21, .handler = spurious_irq, .vector = 0x21, .ring = RING0},
+    [0x22] = {.state = 0x01, .entry = hwint0x22, .handler = spurious_irq, .vector = 0x22, .ring = RING0},
+    [0x23] = {.state = 0x01, .entry = hwint0x23, .handler = spurious_irq, .vector = 0x23, .ring = RING0},
+    [0x24] = {.state = 0x01, .entry = hwint0x24, .handler = spurious_irq, .vector = 0x24, .ring = RING0},
+    [0x25] = {.state = 0x01, .entry = hwint0x25, .handler = spurious_irq, .vector = 0x25, .ring = RING0},
+    [0x26] = {.state = 0x01, .entry = hwint0x26, .handler = spurious_irq, .vector = 0x26, .ring = RING0},
+    [0x27] = {.state = 0x01, .entry = hwint0x27, .handler = spurious_irq, .vector = 0x27, .ring = RING0},
+    [0x28] = {.state = 0x01, .entry = hwint0x28, .handler = spurious_irq, .vector = 0x28, .ring = RING0},
+    [0x29] = {.state = 0x01, .entry = hwint0x29, .handler = spurious_irq, .vector = 0x29, .ring = RING0},
+    [0x2a] = {.state = 0x01, .entry = hwint0x2a, .handler = spurious_irq, .vector = 0x2a, .ring = RING0},
+    [0x2b] = {.state = 0x01, .entry = hwint0x2b, .handler = spurious_irq, .vector = 0x2b, .ring = RING0},
+    [0x2c] = {.state = 0x01, .entry = hwint0x2c, .handler = spurious_irq, .vector = 0x2c, .ring = RING0},
+    [0x2d] = {.state = 0x01, .entry = hwint0x2d, .handler = spurious_irq, .vector = 0x2d, .ring = RING0},
+    [0x2e] = {.state = 0x01, .entry = hwint0x2e, .handler = spurious_irq, .vector = 0x2e, .ring = RING0},
+    [0x2e] = {.state = 0x01, .entry = hwint0x2f, .handler = spurious_irq, .vector = 0x2f, .ring = RING0},
+
+    /* 系统调用中断 */
+    [0x80] = {.state = 0x01, .entry = sys_call, .handler = do_syscall, .vector = 0x80, .ring = RING3},
+
+};

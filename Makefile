@@ -127,7 +127,7 @@ $(build)/%.d: %.c config
 -include $(addprefix $(build)/, $(patsubst %.c, %.d, $(filter %.c, $(src-all))))
 
 $(build)/%.o: %.S
-	$(CC) $(CFLAGS) -E $< > $(addprefix $(build)/, $(patsubst %.S, %.s, $<))
+	$(CC) $(CFLAGS) -E -D__ASSEMBLY__ $< > $(addprefix $(build)/, $(patsubst %.S, %.s, $<))
 	$(AS) $(ASFLAGS) -o $@ $(addprefix $(build)/, $(patsubst %.S, %.s, $<))
 
 

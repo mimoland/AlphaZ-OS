@@ -3,11 +3,13 @@
 
 #include <alphaz/type.h>
 
+#define __packed __attribute__((packed))
+
 struct gdtr_struct
 {
     u16 len;
     u32 base;
-} __attribute__((packed)); // __attribute__((packed)) 防止编译器优化对齐
+} __packed;
 
 /* TSS(任务状态段) _开头为保留，cpu不使用 */
 struct tss_struct
@@ -39,7 +41,7 @@ struct tss_struct
 	u16	ldt, _ldth;
 	u16	trap;
 	u16	iobase;	/* I/O位图基址大于或等于TSS段界限，就表示没有I/O许可位图 */
-} __attribute__((packed));
+} __packed;
 
 
 /* 描述符 */
@@ -51,7 +53,7 @@ struct desc_struct	/* 共 8 个字节 */
 	u8	attr1;			    /* P(1) DPL(2) DT(1) TYPE(4) */
 	u8	limit_high_attr2;	/* G(1) D(1) 0(1) AVL(1) LimitHigh(4) */
 	u8	base_high;		    /* Base */
-} __attribute__((packed));
+} __packed;
 
 /* 门描述符 */
 struct gate_struct
@@ -61,7 +63,7 @@ struct gate_struct
 	u8	dcount;         /* 栈切换时要复制的参数数量 */
 	u8	attr;		    /* P(1) DPL(2) DT(1) TYPE(4) */
 	u16	offset_high;	/* Offset High */
-} __attribute__((packed));
+} __packed;
 
 
 /**
@@ -69,24 +71,25 @@ struct gate_struct
  */
 struct pt_regs
 {
-    unsigned long gs;
-	unsigned long fs;
-	unsigned long es;
-	unsigned long ds;
-	unsigned long edi;
-	unsigned long esi;
-	unsigned long ebp;
-	unsigned long esp0;
-	unsigned long ebx;
-	unsigned long edx;
-	unsigned long ecx;
-	unsigned long eax;
-	unsigned long eip;
-	unsigned long cs;
-	unsigned long eflags;
-	unsigned long esp;
-	unsigned long ss;
-} __attribute__((packed));
+    long gs;
+	long fs;
+	long es;
+	long ds;
+	long edi;
+	long esi;
+	long ebp;
+	long esp0;
+	long ebx;
+	long edx;
+	long ecx;
+	long eax;
+    long orig_eax;
+	long eip;
+	long cs;
+	long eflags;
+	long esp;
+	long ss;
+} __packed;
 
 
 /**
