@@ -18,7 +18,6 @@ void setup_counter(void)
     outb(0x43, 0x36); /* 使用二进制 模式3 先读写低字节再读写高字节 计数器0 */
     outb(0x40, (u8)(t / HZ));
     outb(0x40, (u8)((t / HZ) >> 8));
-    enable_irq(0x00);
 }
 
 /**

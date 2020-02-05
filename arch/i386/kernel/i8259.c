@@ -45,6 +45,8 @@ void enable_irq(unsigned short irq)
     } else {
         val = val & inb(INT_S_CTLMASK);
         outb(INT_S_CTLMASK, val);
+        val = (~(1 << 2)) & inb(INT_M_CTLMASK);     /* 开启主片级联 */
+        outb(INT_M_CTLMASK, val);
     }
 }
 

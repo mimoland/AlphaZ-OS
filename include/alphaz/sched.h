@@ -22,10 +22,6 @@ struct pt_regs * get_pt_regs(struct task_struct *task);
 
 void copy_thread(struct thread_struct *, struct thread_struct *);
 
-/*
- * 时钟中断处理程序，在entry.asm中被时钟中断调用
- */
-void do_timer(void);
 
 /* 进程链表头 */
 extern struct list_head task_head;

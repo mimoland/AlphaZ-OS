@@ -13,6 +13,7 @@
 
 #include <asm/system.h>
 #include <asm/sched.h>
+#include <asm/irq.h>
 #include <asm/cpu.h>
 
 
@@ -107,7 +108,7 @@ void __sched schedule(void)
 /**
  * 时钟中断处理函数
  */
-void do_timer(void)
+void do_timer(struct pt_regs *reg, unsigned nr)
 {
     ticks_plus();
     update_alarm();
@@ -199,4 +200,5 @@ void task_init(void)
     // fix me: 为什么要先初始化时钟中断，先初始化idle进程却不行
     setup_counter();
     setup_idle_process();
+    register_irq(0x20, do_timer);
 }

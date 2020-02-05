@@ -44,10 +44,36 @@ void irq_init(void)
     setup_idtr();
 }
 
+int register_irq(unsigned vector, irq_handler handler)
+{
+    if (vector >= NR_IRQ) return -1;
+    if (!(irq_array[vector].state & IRQ_STATE_DEFINED)
+        || irq_array[vector].state & IRQ_STATE_INUSE)
+        return -1;
+    irq_array[vector].state |= IRQ_STATE_INUSE;
+    irq_array[vector].handler = handler;
+    if (vector >= 0x20 && vector <= 0x2f) {
+        enable_irq(vector - 0x20);
+    }
+    return 0;
+}
+
+int unregister_irq(unsigned vector)
+{
+    if (vector >= NR_IRQ) return -1;
+    if (vector >= 0x20 && vector <= 0x2f) {
+        disable_irq(vector - 0x20);
+    }
+    irq_array[vector].state = 0x01;
+    irq_array[vector].handler = NULL;
+    return 0;
+}
+
 asmlinkage void do_IRQ(struct pt_regs *regs)
 {
     unsigned vector = regs->orig_eax;
-    irq_array[vector].handler(regs, vector);
+    if (irq_array[vector].state & IRQ_STATE_INUSE)
+        irq_array[vector].handler(regs, vector);
 }
 
 /* 异常的统一处理函数 */
@@ -64,23 +90,23 @@ static void spurious_irq(struct pt_regs *regs, unsigned nr)
 
 struct irq_struct irq_array[NR_IRQ] = {
     /* 处理器异常 */
-    [0x00] = {.state = 0x01, .entry = divide_error,           .handler = exception_handler, .vector = 0x00, .ring = RING0 },
-    [0x01] = {.state = 0x01, .entry = single_step_exception,  .handler = exception_handler, .vector = 0x01, .ring = RING0 },
-    [0x02] = {.state = 0x01, .entry = nmi,                    .handler = exception_handler, .vector = 0x02, .ring = RING0 },
-    [0x03] = {.state = 0x01, .entry = breakpoint_exception,   .handler = exception_handler, .vector = 0x03, .ring = RING3 },
-    [0x04] = {.state = 0x01, .entry = overflow,               .handler = exception_handler, .vector = 0x04, .ring = RING3 },
-    [0x05] = {.state = 0x01, .entry = bounds_check,           .handler = exception_handler, .vector = 0x05, .ring = RING0 },
-    [0x06] = {.state = 0x01, .entry = inval_opcode,           .handler = exception_handler, .vector = 0x06, .ring = RING0 },
-    [0x07] = {.state = 0x01, .entry = copr_not_available,     .handler = exception_handler, .vector = 0x07, .ring = RING0 },
-    [0x08] = {.state = 0x01, .entry = double_fault,           .handler = exception_handler, .vector = 0x08, .ring = RING0 },
-    [0x09] = {.state = 0x01, .entry = copr_seg_overrun,       .handler = exception_handler, .vector = 0x09, .ring = RING0 },
-    [0x0a] = {.state = 0x01, .entry = inval_tss,              .handler = exception_handler, .vector = 0x0a, .ring = RING0 },
-    [0x0b] = {.state = 0x01, .entry = segment_not_present,    .handler = exception_handler, .vector = 0x0b, .ring = RING0 },
-    [0x0c] = {.state = 0x01, .entry = stack_exception,        .handler = exception_handler, .vector = 0x0c, .ring = RING0 },
-    [0x0d] = {.state = 0x01, .entry = general_protection,     .handler = exception_handler, .vector = 0x0d, .ring = RING0 },
-    [0x0e] = {.state = 0x01, .entry = page_fault,             .handler = exception_handler, .vector = 0x0e, .ring = RING0 },
+    [0x00] = {.state = 0x02, .entry = divide_error,           .handler = exception_handler, .vector = 0x00, .ring = RING0 },
+    [0x01] = {.state = 0x02, .entry = single_step_exception,  .handler = exception_handler, .vector = 0x01, .ring = RING0 },
+    [0x02] = {.state = 0x02, .entry = nmi,                    .handler = exception_handler, .vector = 0x02, .ring = RING0 },
+    [0x03] = {.state = 0x02, .entry = breakpoint_exception,   .handler = exception_handler, .vector = 0x03, .ring = RING3 },
+    [0x04] = {.state = 0x02, .entry = overflow,               .handler = exception_handler, .vector = 0x04, .ring = RING3 },
+    [0x05] = {.state = 0x02, .entry = bounds_check,           .handler = exception_handler, .vector = 0x05, .ring = RING0 },
+    [0x06] = {.state = 0x02, .entry = inval_opcode,           .handler = exception_handler, .vector = 0x06, .ring = RING0 },
+    [0x07] = {.state = 0x02, .entry = copr_not_available,     .handler = exception_handler, .vector = 0x07, .ring = RING0 },
+    [0x08] = {.state = 0x02, .entry = double_fault,           .handler = exception_handler, .vector = 0x08, .ring = RING0 },
+    [0x09] = {.state = 0x02, .entry = copr_seg_overrun,       .handler = exception_handler, .vector = 0x09, .ring = RING0 },
+    [0x0a] = {.state = 0x02, .entry = inval_tss,              .handler = exception_handler, .vector = 0x0a, .ring = RING0 },
+    [0x0b] = {.state = 0x02, .entry = segment_not_present,    .handler = exception_handler, .vector = 0x0b, .ring = RING0 },
+    [0x0c] = {.state = 0x02, .entry = stack_exception,        .handler = exception_handler, .vector = 0x0c, .ring = RING0 },
+    [0x0d] = {.state = 0x02, .entry = general_protection,     .handler = exception_handler, .vector = 0x0d, .ring = RING0 },
+    [0x0e] = {.state = 0x02, .entry = page_fault,             .handler = exception_handler, .vector = 0x0e, .ring = RING0 },
 
-    [0x10] = {.state = 0x01, .entry = copr_error,             .handler = exception_handler, .vector = 0x10, .ring = RING0 },
+    [0x10] = {.state = 0x02, .entry = copr_error,             .handler = exception_handler, .vector = 0x10, .ring = RING0 },
 
     /* 外部硬件中断 */
     [0x20] = {.state = 0x01, .entry = hwint0x20, .handler = spurious_irq, .vector = 0x20, .ring = RING0},
@@ -98,7 +124,7 @@ struct irq_struct irq_array[NR_IRQ] = {
     [0x2c] = {.state = 0x01, .entry = hwint0x2c, .handler = spurious_irq, .vector = 0x2c, .ring = RING0},
     [0x2d] = {.state = 0x01, .entry = hwint0x2d, .handler = spurious_irq, .vector = 0x2d, .ring = RING0},
     [0x2e] = {.state = 0x01, .entry = hwint0x2e, .handler = spurious_irq, .vector = 0x2e, .ring = RING0},
-    [0x2e] = {.state = 0x01, .entry = hwint0x2f, .handler = spurious_irq, .vector = 0x2f, .ring = RING0},
+    [0x2f] = {.state = 0x01, .entry = hwint0x2f, .handler = spurious_irq, .vector = 0x2f, .ring = RING0},
 
     /* 系统调用中断, 注意，这里系统调用不经过do_IRQ, 而是根据系统调用表调用相关的handler */
     [0x80] = {.state = 0x01, .entry = system_call, .vector = 0x80, .ring = RING3},

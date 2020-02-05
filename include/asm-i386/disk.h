@@ -29,8 +29,6 @@
 void disk_init(void);
 void disk_exit(void);
 
-void disk_handler(void);
-
 struct request_queue
 {
     unsigned char nsect;     /* 操作的扇区数量 */

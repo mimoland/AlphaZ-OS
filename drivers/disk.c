@@ -14,7 +14,7 @@
 
 
 static request_queue_head_t disk_request_head;
-
+void disk_handler(struct pt_regs *, unsigned);
 /**
  * disk_init - ATA硬盘初始化
  * 为了简单起见，这里使用基于IDT的I/O端口编程模式对ATA硬盘进行访问，而不使用SATA控制器和PCI
@@ -23,8 +23,7 @@ static request_queue_head_t disk_request_head;
 void disk_init(void)
 {
     INIT_REQUEST_QUEST_HEAD(&disk_request_head);
-    enable_irq(0x2);        /* 主片级联 */
-    enable_irq(0xe);
+    register_irq(0x2e, disk_handler);
     outb(PORT_DISK0_ALT_STA_CTL, 0);
     outb(PORT_DISK0_ERR_FEATURE , 0);
     outb(PORT_DISK0_SECTOR_CNT, 0);
@@ -36,14 +35,14 @@ void disk_init(void)
 
 void disk_exit(void)
 {
-
+    unregister_irq(0x2e);
 }
 
 /**
  * disk_handler - 硬盘中断处理函数
  * 硬盘会在写完一个扇区或者读完一个扇区后进行中断，所以一次硬盘设备请求可能会触发不止一次中断
  */
-void disk_handler(void)
+void disk_handler(struct pt_regs *regs, unsigned nr)
 {
     disk_request_head.use->end_handler();
 }

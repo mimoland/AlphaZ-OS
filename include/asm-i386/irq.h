@@ -17,8 +17,11 @@ struct irq_struct
     unsigned short ring;     /* 中断特权级 */
 };
 
+int register_irq(unsigned, irq_handler);
+int unregister_irq(unsigned vector);
 
-#define IRQ_STATE_DEFINED     (1 << 0)
+#define IRQ_STATE_DEFINED   (1 << 0)
+#define IRQ_STATE_INUSE     (1 << 1)
 
 struct idtr_struct
 {
