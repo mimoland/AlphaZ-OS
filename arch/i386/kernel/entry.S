@@ -8,18 +8,32 @@
 
 #define SAVE_ALL    \
     cld;            \
-    pushal;         \
-    pushl   %ds;    \
-    pushl   %es;    \
+    pushl   %gs;    \
     pushl   %fs;    \
-    pushl   %gs
+    pushl   %es;    \
+    pushl   %ds;    \
+    pushl   %eax;   \
+    pushl   %ebp;   \
+    pushl   %edi;   \
+    pushl   %esi;   \
+    pushl   %edx;   \
+    pushl   %ecx;   \
+    pushl   %ebx
 
-#define RESTOR_ALL   \
-    popl    %gs;     \
-    popl    %fs;     \
-    popl    %es;     \
-    popl    %ds;     \
-    popal
+#define RESTOR_ALL  \
+    popl    %ebx;   \
+    popl    %ecx;   \
+    popl    %edx;   \
+    popl    %esi;   \
+    popl    %edi;   \
+    popl    %ebp;   \
+    popl    %eax;   \
+    popl    %ds;    \
+    popl    %es;    \
+    popl    %fs;    \
+    popl    %gs
+
+PT_EAX = 0x18
 
 #define INTERRUPT_RETURN     \
     addl    $4, %esp;        \
@@ -205,14 +219,12 @@ exception:
 /* 系统调用入口 int 0x80
  * eax中为功能号
  */
-ENTRY(sys_call)
-    pushl   %eax
+ENTRY(system_call)
+    pushl   %eax    /* 压入功能号 */
 	SAVE_ALL
-    PUSH_PT_ARGS
-	sti
-	call	do_IRQ
-	cli
-	POP_PT_ARGS
+    movl    PT_EAX(%esp), %eax
+    call    *sys_call_table(,%eax,4)
+    movl    %eax, PT_EAX(%esp)
     RESTOR_ALL
     INTERRUPT_RETURN
-END(sys_call)
+END(system_call)

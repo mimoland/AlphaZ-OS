@@ -4,7 +4,6 @@
 #include <asm/irq.h>
 #include <asm/cpu.h>
 #include <asm/i8259.h>
-#include <asm/syscall.h>
 
 struct gate_struct idt[NR_IRQ];
 
@@ -48,7 +47,6 @@ void irq_init(void)
 asmlinkage void do_IRQ(struct pt_regs *regs)
 {
     unsigned vector = regs->orig_eax;
-    printk("%d\n", vector);
     irq_array[vector].handler(regs, vector);
 }
 
@@ -102,7 +100,7 @@ struct irq_struct irq_array[NR_IRQ] = {
     [0x2e] = {.state = 0x01, .entry = hwint0x2e, .handler = spurious_irq, .vector = 0x2e, .ring = RING0},
     [0x2e] = {.state = 0x01, .entry = hwint0x2f, .handler = spurious_irq, .vector = 0x2f, .ring = RING0},
 
-    /* 系统调用中断 */
-    [0x80] = {.state = 0x01, .entry = sys_call, .handler = do_syscall, .vector = 0x80, .ring = RING3},
+    /* 系统调用中断, 注意，这里系统调用不经过do_IRQ, 而是根据系统调用表调用相关的handler */
+    [0x80] = {.state = 0x01, .entry = system_call, .vector = 0x80, .ring = RING3},
 
 };

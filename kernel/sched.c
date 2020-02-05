@@ -7,7 +7,8 @@
 #include <alphaz/malloc.h>
 #include <alphaz/string.h>
 #include <alphaz/kernel.h>
-#include <alphaz/syscall.h>
+#include <alphaz/unistd.h>
+#include <alphaz/linkage.h>
 #include <alphaz/tty.h>
 
 #include <asm/system.h>
@@ -119,21 +120,19 @@ void do_timer(void)
  * 该进程实现了秒级睡眠和毫秒级睡眠的中断处理，对应sleep和msleep两个系统调用的用户态接口，根
  * 据第一个参数的类型，来确定使用哪种类型的睡眠, 时间精度位10ms
  */
-void __sched sys_sleep(void)
+asmlinkage long __sched sys_sleep(unsigned long type, unsigned long t)
 {
-    unsigned long type, t;
-    SYSCALL_ARGS_2(type, t);
-
     if (type == 0) {
         current->alarm = t * HZ;
     } else if (type == 1) {
         current->alarm = t / (1000 / HZ);
     } else {
         printk("sys_sleep error\n");
-        return;
+        return -1;
     }
     current->state = TASK_INTERRUPTIBLE;
     schedule();
+    return 0;
 }
 
 /**

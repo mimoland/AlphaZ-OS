@@ -107,7 +107,7 @@ extern void hwint0x2f();
 /* 系统调用号 */
 #define INT_VECTOR_SYSCALL          0x80
 /* defined in entry.asm */
-extern void sys_call();
+extern void system_call(void);
 
 #endif  /*__ASSEMBLY__*/
 

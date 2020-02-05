@@ -71,18 +71,17 @@ struct gate_struct
  */
 struct pt_regs
 {
-    long gs;
-	long fs;
-	long es;
-	long ds;
-	long edi;
-	long esi;
-	long ebp;
-	long esp0;
-	long ebx;
-	long edx;
+    long ebx;
 	long ecx;
+	long edx;
+	long esi;
+	long edi;
+	long ebp;
 	long eax;
+	int  ds;
+	int  es;
+	int  fs;
+	int  gs;
     long orig_eax;
 	long eip;
 	long cs;

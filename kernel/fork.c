@@ -1,6 +1,7 @@
 #include <alphaz/fork.h>
 #include <alphaz/sched.h>
-#include <alphaz/syscall.h>
+#include <alphaz/unistd.h>
+#include <alphaz/linkage.h>
 #include <alphaz/kernel.h>
 #include <alphaz/malloc.h>
 
@@ -12,13 +13,13 @@ int generate_pid(void)
 }
 
 
-void sys_fork(void)
+asmlinkage long sys_fork(void)
 {
     struct task_struct *curr, *new;
     struct pt_regs *regs;
 
     curr = current;
-    regs = get_pt_regs(curr);
+    regs = get_pt_regs(curr); /* 待重构 */
 
     new = alloc_page(0, 1);
     new->state = TASK_RUNNING;
@@ -43,5 +44,5 @@ void sys_fork(void)
 
     list_add(&new->sibling, &curr->children);
 
-    SYSCALL_RETURN(new->pid);
+    return new->pid;
 }

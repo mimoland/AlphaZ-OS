@@ -6,7 +6,7 @@
 #include <alphaz/mm.h>
 #include <alphaz/tty.h>
 #include <alphaz/stdio.h>
-#include <alphaz/syscall.h>
+#include <alphaz/unistd.h>
 #include <alphaz/kernel.h>
 #include <alphaz/keyboard.h>
 #include <alphaz/init.h>
@@ -22,7 +22,6 @@ void kernel_main()
 {
     cpu_init();
     irq_init();
-    syscall_init();
     mm_init();
     keyboard_init();
     shell_init();
@@ -34,11 +33,13 @@ void kernel_main()
      */
     move_to_user_mode();
 
-    if (!fork()) {
-        init();
-    }
+    // if (!fork()) {
+    //     init();
+    // }
 
     while (1) {
-        delay(1);
+        debug();
+        delay(10);
+        printf("%d\n", get_ticks());
     }
 }
