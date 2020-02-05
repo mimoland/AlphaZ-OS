@@ -1,5 +1,5 @@
 #include <stdarg.h>
-#include <alphaz/syscall.h>
+#include <alphaz/unistd.h>
 #include <alphaz/stdio.h>
 #include <alphaz/kernel.h>
 #include <alphaz/tty.h>

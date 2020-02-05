@@ -1,7 +1,7 @@
 #include <stdarg.h>
 #include <alphaz/type.h>
+#include <alphaz/unistd.h>
 #include <asm/unistd.h>
-#include <asm/syscall.h>
 #include <asm/cpu.h>
 #include <asm/io.h>
 

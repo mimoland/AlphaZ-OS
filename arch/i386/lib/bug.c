@@ -1,7 +1,7 @@
 #include <alphaz/type.h>
 #include <alphaz/stdio.h>
+#include <alphaz/unistd.h>
 #include <asm/bug.h>
-#include <asm/syscall.h>
 
 int disp_pos = 0;
 

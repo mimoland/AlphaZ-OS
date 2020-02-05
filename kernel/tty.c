@@ -2,7 +2,7 @@
 #include <alphaz/tty.h>
 #include <alphaz/kernel.h>
 #include <alphaz/stdio.h>
-#include <alphaz/syscall.h>
+#include <alphaz/unistd.h>
 #include <alphaz/keyboard.h>
 #include <alphaz/string.h>
 #include <asm/bug.h>
