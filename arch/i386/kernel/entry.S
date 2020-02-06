@@ -53,30 +53,31 @@ PT_EAX = 0x18
     outb    %al, $0xa0
 
 /* could not use stack */
+/* 这里传入的是中断号，相应的引脚号要减去0x20 */
 #define CLOSE_8259A_PIN(irq)    \
     movb    $8, %al;            \
-    cmpb    $irq, %al;          \
-    jl      1f;                 \
+    cmpb    $(irq-0x20), %al;   \
+    jle     1f;                 \
     inb     $0x21, %al;         \
-    bts     $irq,  %ax;         \
+    bts     $(irq-0x20), %ax;   \
     outb    %al, $0x21;         \
     jmp     2f;                 \
   1:inb     $0xa1, %al;         \
-    bts     $(irq - 8), %ax;    \
+    bts     $(irq-0x28), %ax;   \
     outb    %al, $0xa1;         \
   2: ;
 
 /* could not use stack */
 #define OPEN_8259A_PIN(irq)     \
     movb    $8, %al;            \
-    cmpb    $irq, %al;          \
-    jl      1f;                 \
+    cmpb    $(irq-0x20), %al;   \
+    jle     1f;                 \
     inb     $0x21, %al;         \
-    btr     $irq,  %ax;         \
+    btr     $(irq-0x20),  %ax;  \
     outb    %al, $0x21;         \
     jmp     2f;                 \
   1:inb     $0xal, %al;         \
-    btr     $(irq - 8), %ax;    \
+    btr     $(irq-0x28), %ax;   \
     outb    %al, $0xa1;         \
   2: ;
 
