@@ -113,7 +113,13 @@ union task_union
 
 /**
  * 获取用户栈的栈底
+ *
+ * 这里之所以减去32的原因是因为gcc为了提高函数调用时的速度，会先在栈上sub出一部分空间，然后采
+ * 用诸如movl $1, (%esp)的方式进行传参，而不是使用push，在普通的程序中这样确实不错，但是我
+ * 遇到当我在kernel_main中切换了栈后，如果还使用这种方式传参，却没有在栈上sub出空间的话，这
+ * 会使得这类传参操作会非法修改(%esp)处的内存，导致一些不相关变量的值被修改或者会造成缺页异常
+ * 所以在这里要先在栈上留出一些空间，保证gcc采用这类传参方式不会出错
  */
-#define user_stack_top(task) (((u8 *)task->stack) + USER_STACK_SIZE)
+#define user_stack_top(task) (((u8 *)task->stack) + USER_STACK_SIZE - 32)
 
 #endif
