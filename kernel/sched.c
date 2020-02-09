@@ -137,57 +137,38 @@ asmlinkage long __sched sys_sleep(unsigned long type, unsigned long t)
 }
 
 /**
- * 不可中断进程睡眠
- */
-// void sleep_on(wait_queue_head_t *wq)
-// {
-
-// }
-
-
-/**
- * 可中断进程睡眠
- */
-// void interruptible_sleep_on(wait_queue_head_t *wq)
-// {
-
-// }
-
-/**
- * 创建idle进程
+ * 设置idle进程，其中栈在head.S中创建
  */
 static void setup_idle_process(void)
 {
-    /* 其中包括内核栈 */
-    struct task_struct *ts = (struct task_struct *)alloc_page(0, 1);
-    memset(ts, 0, sizeof(struct task_struct));
+	/* 其中包括内核栈 */
+	struct task_struct *ts = current;
 
-    ts->state = TASK_RUNNING;
-    ts->flags = 0;
+	ts->state = TASK_RUNNING;
+	ts->flags = 0;
 
-    ts->stack = alloc_page(0, 1);
-    ts->pid = 0;
-    ts->prio = LOWEST_PRIO;
-    ts->counter = 1;
-    ts->alarm = 0;
+	ts->stack = NULL;           /* 无用户栈 */
+	ts->pid = 0;
+	ts->prio = LOWEST_PRIO;
+	ts->counter = 1;
+	ts->alarm = 0;
 
-    strcpy(ts->comm, "idle");
+	strcpy(ts->comm, "idle");
 
-    ts->parent = NULL;
-    list_head_init(&ts->children);
+	ts->parent = NULL;
+	list_head_init(&ts->children);
 
-    ts->thread.esp0 = (u32)kernel_stack_top(ts);
-    ts->thread.esp = (u32)user_stack_top(ts);
-    ts->mm = NULL;
-    ts->signal = 0;
+	ts->thread.esp0 = NULL_STACK_MAGIC;
+	ts->thread.esp = NULL_STACK_MAGIC;
+	ts->mm = NULL;
+	ts->signal = 0;
 
-    idle = ts;
+	idle = ts;
 
-    tss.esp0 = ts->thread.esp0;
+	tss.esp0 = ts->thread.esp0;
 
-    list_add(&ts->task, &task_head);
+	list_add(&ts->task, &task_head);
 }
-
 
 /**
  * 任务(进程)初始化，创建第一个进程

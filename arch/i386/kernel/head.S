@@ -1,8 +1,9 @@
 #include <alphaz/linkage.h>
 
 .section .bss
-stack_space:
-    .fill 2048,8,0
+.align 4096
+idle_stack:
+    .fill 4096,8,0
 stack_top:
 
 .section .text

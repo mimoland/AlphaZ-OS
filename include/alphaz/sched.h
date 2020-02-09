@@ -14,12 +14,11 @@
 
 #define current __current()
 
+#define NULL_STACK_MAGIC    0x1234      /* 空栈魔数，便于识别错误 */
+
 void task_init(void);
-
 void schedule(void);
-
 struct pt_regs * get_pt_regs(struct task_struct *task);
-
 void copy_thread(struct thread_struct *, struct thread_struct *);
 
 
