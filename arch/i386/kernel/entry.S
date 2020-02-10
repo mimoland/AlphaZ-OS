@@ -229,3 +229,21 @@ ENTRY(system_call)
     RESTOR_ALL
     INTERRUPT_RETURN
 END(system_call)
+
+ENTRY(kernel_thread_ret)
+    OPEN_8259A_PIN(0x20)
+    popl    %ebx
+    popl    %ecx
+    popl    %edx
+    popl    %esi
+    popl    %edi
+    popl    %ebp
+    popl    %eax
+    popl    %ds
+    popl    %es
+    popl    %fs
+    popl    %gs
+    call    *%ebx
+    pushl   %eax
+    call    sys_exit
+END(kernel_thread_ret)

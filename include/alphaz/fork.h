@@ -5,10 +5,21 @@
 #include <alphaz/linkage.h>
 #include <asm/cpu.h>
 
+#define CLONE_VM        (1 << 0)
+#define CLONE_FS        (1 << 1)
+#define CLONE_PTRACE    (1 << 2)
+#define CLONE_VFORK     (1 << 3)
+#define CLONE_STOPPEN   (1 << 4)
+#define CLONE_SIGHAND   (1 << 5)
+#define CLOSE_THREAD    (1 << 6)
+
+extern pid_t global_pid;
+
 extern void ret_from_fork(void);
+extern void kernel_thread_ret(void);
 
-int copy_process(struct task_struct *, struct pt_regs *);
+pid_t kernel_thread(int (*fn)(void), void *, unsigned long);
 
-asmlinkage long sys_fork(void);
+asmlinkage pid_t sys_fork(void);
 
 #endif

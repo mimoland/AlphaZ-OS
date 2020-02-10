@@ -4,7 +4,9 @@
 #include <asm/cpu.h>
 #include <alphaz/sched.h>
 
+/* 只有内核级进程才可调用此功能, 并且调用后，进程便丢失了原来的栈信息，不能再进行函数返回 */
 #define move_to_user_mode() do {                              \
+    unsigned long _esp = (unsigned long)user_stack_top(current);        \
     asm volatile(                                                       \
         "pushl %%ebx\n\t"                                               \
         "pushl %%eax\n\t"                                               \
@@ -21,7 +23,7 @@
         "mov %%ax, %%es\n\t"                                            \
         "mov %%ax, %%fs\n\t"                                            \
         :                                                               \
-        :"a"(idle->thread.esp), "b"(USER_DATA_SELECTOR), "d"(USER_CODE_SELECTOR)); \
+        :"a"(_esp), "b"(USER_DATA_SELECTOR), "d"(USER_CODE_SELECTOR));   \
 } while (0)
 
 

@@ -10,6 +10,7 @@
 #include <alphaz/kernel.h>
 #include <alphaz/keyboard.h>
 #include <alphaz/init.h>
+#include <alphaz/fork.h>
 
 #include <asm/system.h>
 #include <asm/bug.h>
@@ -28,18 +29,10 @@ void kernel_main()
     task_init();
 
     cls_screen();
-    /**
-     * 切换到第进程0执行
-     */
-    move_to_user_mode();
 
-    // if (!fork()) {
-    //     init();
-    // }
-
+    kernel_thread(init, NULL, 0);
+    sti();
     while (1) {
-        debug();
-        delay(10);
-        printf("%d\n", get_ticks());
+        hlt();
     }
 }

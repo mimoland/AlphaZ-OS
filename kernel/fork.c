@@ -1,48 +1,22 @@
 #include <alphaz/fork.h>
-#include <alphaz/sched.h>
-#include <alphaz/unistd.h>
-#include <alphaz/linkage.h>
 #include <alphaz/kernel.h>
+#include <alphaz/linkage.h>
 #include <alphaz/malloc.h>
+#include <alphaz/sched.h>
+#include <alphaz/type.h>
+#include <alphaz/unistd.h>
+#include <asm/process.h>
 
+pid_t global_pid = 0;
 
-int generate_pid(void)
+asmlinkage int sys_fork(void)
 {
-    pid = (pid + 1) % 65536;
-    return pid;
+	struct pt_regs *regs = (struct pt_regs *)current->thread.esp0 - 1;
+	return do_fork(regs, CLONE_FS, 0, 0);
 }
 
-
-asmlinkage long sys_fork(void)
+int kernel_thread(int (*fn)(void), void *args, unsigned long flags)
 {
-    struct task_struct *curr, *new;
-    struct pt_regs *regs;
-
-    curr = current;
-    regs = get_pt_regs(curr); /* 待重构 */
-
-    new = alloc_page(0, 1);
-    new->state = TASK_RUNNING;
-    new->flags = curr->flags;
-
-    new->stack = alloc_page(0, 1);
-    new->pid = generate_pid();
-    new->counter = curr->counter;
-    new->alarm = curr->alarm;
-
-    memcpy(new->stack, curr->stack, USER_STACK_SIZE);
-
-    new->parent = curr;
-    list_head_init(&new->children);
-
-    copy_process(new, regs);
-    new->mm = NULL;
-
-    new->signal = 0;
-
-    list_add_tail(&new->task, &task_head);
-
-    list_add(&new->sibling, &curr->children);
-
-    return new->pid;
+	struct pt_regs regs;
+	return _kernel_thread(&regs, fn, args, flags);
 }

@@ -9,7 +9,7 @@ ENTRY(sys_call_table)
     .long  sys_fork
     .long  sys_read
     .long  sys_write
-    .long  sys_debug    /* 5 */
+    .long  sys_exit    /* 5 */
     .long  sys_debug
     .long  sys_debug
     .long  sys_debug

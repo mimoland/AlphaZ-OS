@@ -136,6 +136,11 @@ asmlinkage long __sched sys_sleep(unsigned long type, unsigned long t)
     return 0;
 }
 
+asmlinkage int sys_exit(int status)
+{
+    return status;
+}
+
 /**
  * 设置idle进程，其中栈在head.S中创建
  */
@@ -145,7 +150,7 @@ static void setup_idle_process(void)
 	struct task_struct *ts = current;
 
 	ts->state = TASK_RUNNING;
-	ts->flags = 0;
+	ts->flags |= PF_KERNEL;
 
 	ts->stack = NULL;           /* 无用户栈 */
 	ts->pid = 0;
@@ -178,7 +183,6 @@ static void setup_idle_process(void)
 void task_init(void)
 {
     list_head_init(&task_head);
-    // fix me: 为什么要先初始化时钟中断，先初始化idle进程却不行
     setup_counter();
     setup_idle_process();
     register_irq(0x20, do_timer);

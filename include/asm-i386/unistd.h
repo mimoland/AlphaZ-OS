@@ -6,6 +6,7 @@
 #define __NR_fork       2
 #define __NR_read       3
 #define __NR_write      4
+#define __NR_exit       5
 #define __NR_getpid     20
 #define __NR_sleep      21
 #define __NR_reboot     30

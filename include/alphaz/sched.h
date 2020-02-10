@@ -58,6 +58,9 @@ extern pid_t volatile __pid_data pid;
 #define	TASK_ZOMBIE		        (1 << 3)        /* 僵尸状态 */
 #define	TASK_STOPPED		    (1 << 4)        /* 停止状态 */
 
+/* 进程标示 */
+#define PF_KERNEL               (1 << 0)    /* 内核级进程 */
+
 /* 进程优先级 */
 #define  LOWEST_PRIO            9999            /* 进程的最低优先级 */
 
