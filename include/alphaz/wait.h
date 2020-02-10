@@ -26,13 +26,13 @@ void __wake_up(wait_queue_head_t *q, unsigned int mode, int nr);
 
 static inline void __add_wait_queue(wait_queue_head_t *head, wait_queue_t *new)
 {
-    list_add(&head->task_list, &new->task_list);
+    list_add(&new->task_list, &head->task_list);
 }
 
 static inline void __add_wait_queue_tail(wait_queue_head_t *head,
                                                             wait_queue_t *new)
 {
-    list_add_tail(&head->task_list, &new->task_list);
+    list_add_tail(&new->task_list, &head->task_list);
 }
 
 static inline void __remove_wait_queue(wait_queue_head_t *head,
