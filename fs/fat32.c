@@ -25,7 +25,6 @@ static struct block_device_operations blkdev;
 void dev_read(unsigned long nsect, unsigned long sector, void *buf)
 {
     blkdev.transfer(BLK_READ, nsect, sector, buf);
-    delay(3);
 }
 
 unsigned int get_next_cluster(unsigned int entry)

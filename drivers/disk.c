@@ -6,14 +6,18 @@
 #include <alphaz/kernel.h>
 #include <alphaz/list.h>
 #include <alphaz/malloc.h>
+#include <alphaz/spinlock.h>
+#include <alphaz/wait.h>
 
+#include <asm/atomic.h>
 #include <asm/disk.h>
 #include <asm/bug.h>
 #include <asm/irq.h>
 #include <asm/io.h>
 
 
-static request_queue_head_t disk_request_head;
+static request_queue_head_t disk_request_head;  /* IO请求队列 */
+wait_queue_head_t disk_wait_queue_head;
 void disk_handler(struct pt_regs *, unsigned);
 /**
  * disk_init - ATA硬盘初始化
@@ -23,6 +27,7 @@ void disk_handler(struct pt_regs *, unsigned);
 void disk_init(void)
 {
     INIT_REQUEST_QUEST_HEAD(&disk_request_head);
+    init_wait_queue_head(&disk_wait_queue_head);
     register_irq(0x2e, disk_handler);
     outb(PORT_DISK0_ALT_STA_CTL, 0);
     outb(PORT_DISK0_ERR_FEATURE , 0);
@@ -124,6 +129,7 @@ static void read_handler(void)
         r->sector++;
         return;
     }
+    wake_up(&disk_wait_queue_head);
     end_request();
     do_request();
 }
@@ -141,6 +147,7 @@ static void write_handler(void)
         outnw(PORT_DISK0_DATA, r->buf, SECTOR_SIZE / 2);
         return;
     }
+    wake_up(&disk_wait_queue_head);
     end_request();
     do_request();
 }
@@ -159,6 +166,7 @@ static void identify_handler(void)
         r->sector++;
         return;
     }
+    wake_up(&disk_wait_queue_head);
     end_request();
     do_request();
 }
@@ -224,7 +232,13 @@ static long IDE_transfer(long cmd, unsigned long sector, unsigned long nsect, vo
     if (cmd == ATA_READ_CMD || cmd == ATA_WRITE_CMD) {
         r = make_request(cmd, sector, nsect, buf);
         put_request(&disk_request_head, r);
-        do_request(); /* do_request不一定执行当前的请求，而是根据请求队列来执行 */
+        /*
+         * do_request不一定执行当前的请求，而是根据请求队列来执行
+         * 此外，do_request后应立即在等待队列上睡眠，防止在睡眠前有磁盘已完成操作触发中断。
+         * 此时，若进程再进行睡眠的话，将造成进程僵死，无法被调度
+         */
+        do_request();
+        interruptible_sleep_on(&disk_wait_queue_head);
     } else
         return 0;
     return 1;
