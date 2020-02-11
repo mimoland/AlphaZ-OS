@@ -1,6 +1,22 @@
 #ifndef _ALPHAZ_SCHED_H_
 #define _ALPHAZ_SCHED_H_
 
+#define KERNEL_STACK_SIZE  4096   /* 内核栈的大小 */
+#define USER_STACK_SIZE    4096   /* 用户栈的大小 */
+
+/* 进程状态 */
+#define TASK_RUNNING		    (1 << 0)        /* 可运行状态 */
+#define TASK_INTERRUPTIBLE	    (1 << 1)        /* 可中断睡眠状态 */
+#define	TASK_UNINTERRUPTIBLE	(1 << 2)        /* 不可中断睡眠状态 */
+#define	TASK_ZOMBIE		        (1 << 3)        /* 僵尸状态 */
+#define	TASK_STOPPED		    (1 << 4)        /* 停止状态 */
+
+/* 进程标示 */
+#define PF_KERNEL               (1 << 0)    /* 内核级进程 */
+#define NEED_SCHEDULE           (1 << 1)    /* 进程需要调度标示 */
+
+#ifndef __ASSEMBLY__
+
 #include <alphaz/type.h>
 #include <alphaz/list.h>
 #include <alphaz/string.h>
@@ -48,22 +64,11 @@ extern unsigned long volatile __ticks_data ticks;
 extern pid_t volatile __pid_data pid;
 
 #define TASK_COMM_LEN      32      /* 进程名的长度 */
-#define KERNEL_STACK_SIZE  4096   /* 内核栈的大小 */
-#define USER_STACK_SIZE    4096   /* 用户栈的大小 */
-
-/* 进程状态 */
-#define TASK_RUNNING		    (1 << 0)        /* 可运行状态 */
-#define TASK_INTERRUPTIBLE	    (1 << 1)        /* 可中断睡眠状态 */
-#define	TASK_UNINTERRUPTIBLE	(1 << 2)        /* 不可中断睡眠状态 */
-#define	TASK_ZOMBIE		        (1 << 3)        /* 僵尸状态 */
-#define	TASK_STOPPED		    (1 << 4)        /* 停止状态 */
-
-/* 进程标示 */
-#define PF_KERNEL               (1 << 0)    /* 内核级进程 */
 
 /* 进程优先级 */
 #define  LOWEST_PRIO            9999            /* 进程的最低优先级 */
 
+/* 进程标示和状态标示的前面不可在定义任何变量，因为这两个变量需要在entry.S中借助偏移来访问 */
 struct task_struct
 {
     volatile long state;    /* 进程状态，-1不可运行，0可运行 */
@@ -123,5 +128,7 @@ union task_union
  * 所以在这里要先在栈上留出一些空间，保证gcc采用这类传参方式不会出错
  */
 #define user_stack_top(task) (((u8 *)task->stack) + USER_STACK_SIZE - 32)
+
+#endif /*__ASSEMBLY__*/
 
 #endif

@@ -3,6 +3,7 @@
  */
 
 #include <alphaz/linkage.h>
+#include <alphaz/sched.h>
 
 .section .text
 
@@ -34,6 +35,13 @@
     popl    %gs
 
 PT_EAX = 0x18
+
+TASK_STATE  = 0x00
+TASK_FLAGS  = 0x04
+
+#define GET_CURRENT(reg)	\
+	movl	$-KERNEL_STACK_SIZE, reg;	\
+	andl	%esp, reg
 
 #define INTERRUPT_RETURN     \
     addl    $4, %esp;        \
@@ -76,7 +84,7 @@ PT_EAX = 0x18
     btr     $(irq-0x20),  %ax;  \
     outb    %al, $0x21;         \
     jmp     2f;                 \
-  1:inb     $0xal, %al;         \
+  1:inb     $0xa1, %al;         \
     btr     $(irq-0x28), %ax;   \
     outb    %al, $0xa1;         \
   2: ;
@@ -90,14 +98,26 @@ PT_EAX = 0x18
     PUSH_PT_ARGS;               \
     call    do_IRQ;             \
     POP_PT_ARGS;                \
-    cli;                        \
     OPEN_8259A_PIN(irq);        \
-    RESTOR_ALL;                 \
-    INTERRUPT_RETURN;
+    jmp     ret_from_int
+
+
+ENTRY(ret_from_int)
+    GET_CURRENT(%ebx)
+    andl    $NEED_SCHEDULE, TASK_FLAGS(%ebx)
+    jnz     re_sched
+    jmp     int_ret
+re_sched:
+    call    schedule
+int_ret:
+    RESTOR_ALL
+    INTERRUPT_RETURN
+END(ret_from_int)
+
 
 ENTRY(ret_from_fork)
     cli
-    OPEN_8259A_PIN(0)
+    OPEN_8259A_PIN(0x20)
     RESTOR_ALL
     INTERRUPT_RETURN
 END(ret_from_fork)

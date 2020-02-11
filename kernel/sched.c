@@ -91,6 +91,8 @@ void __sched schedule(void)
     prev = current;
     next = NULL;
 
+    prev->flags &= ~NEED_SCHEDULE;
+    cli();
     list_del(&prev->task);
     list_add_tail(&prev->task, &task_head);
     list_for_each_entry(p, &task_head, task) {
@@ -102,6 +104,7 @@ void __sched schedule(void)
     if (!next) next = idle;
     next->counter = 1;
     prev = context_switch(prev, next);
+    sti();
 }
 
 
@@ -112,7 +115,7 @@ void do_timer(struct pt_regs *reg, unsigned nr)
 {
     ticks_plus();
     update_alarm();
-    schedule();
+    current->flags |= NEED_SCHEDULE;
 }
 
 
