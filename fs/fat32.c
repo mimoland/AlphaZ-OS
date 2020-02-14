@@ -2,44 +2,45 @@
  * fat32文件系统
  */
 
-#include <alphaz/kernel.h>
 #include <alphaz/blkdev.h>
+#include <alphaz/bugs.h>
 #include <alphaz/fat32.h>
-#include <alphaz/string.h>
+#include <alphaz/fs.h>
+#include <alphaz/kernel.h>
 #include <alphaz/malloc.h>
+#include <alphaz/string.h>
 
 #include <asm/bug.h>
 
-disk_partition_table_t dpt;
-fat32_boot_sector_t boot_sector;
-fat32_fs_info_t     fs_info;
-
-unsigned long first_data_sector;
-unsigned long bytes_per_clus;
-unsigned long first_fat1_sector, first_fat2_sector;
+extern struct super_operations fat32_super_operations;
+extern struct dentry_operations fat32_dentry_operations;
+extern struct inode_operations fat32_inode_operations;
 
 int fd;
 
 static struct block_device_operations blkdev;
 
-void dev_read(unsigned long nsect, unsigned long sector, void *buf)
+static void dev_read(unsigned long sector, unsigned long nsect, void *buf)
 {
-    blkdev.transfer(BLK_READ, nsect, sector, buf);
+    printk("dev_read: sector:%d nsect:%d\n", sector, nsect);
+    blkdev.transfer(BLK_READ, sector, nsect, buf);
 }
 
-unsigned int get_next_cluster(unsigned int entry)
+unsigned int get_next_cluster(struct fat32_private_info *info,
+                              unsigned int entry)
 {
     unsigned int buf[128];
     memset(buf, 0, 512);
-    dev_read(first_fat1_sector + (entry >> 7), 1, buf);
+    dev_read(info->fat1_first_sector + (entry >> 7), 1, buf);
     return buf[entry & 0x7f] & 0x0fffffff;
 }
 
 /* 匹配短目录项 */
-static int match_director(char *name, unsigned int len, fat32_directory_t *dentry)
+static int match_director(char *name, fat32_directory_t *dentry)
 {
     int i, j = 0;
     char ch;
+    int len = strlen(name);
     /* 匹配基础名 */
     for (i = 0; i < 8; i++) {
         switch (dentry->DIR_Name[i]) {
@@ -77,8 +78,7 @@ static int match_director(char *name, unsigned int len, fat32_directory_t *dentr
                 break;
             } else
                 goto match_fail;
-        default:
-            ;
+        default:;
         }
     }
 
@@ -112,26 +112,25 @@ static int match_director(char *name, unsigned int len, fat32_directory_t *dentr
                     break;
                 } else
                     goto match_fail;
-            default:
-                ;
+            default:;
             }
         }
     }
     return 1;
-    match_fail:
+match_fail:
     return 0;
 }
 
 /**
  * 匹配长目录项
  * @name: 要匹配的文件名(目录名)
- * @len:  文件名或目录名的长度
  * @dentry: 长目录项的短目录项
  * 这里对长目录项的匹配并没有验证校验码，也并没有考虑长目录跨簇的问题
  */
-static int match_long_directory(char *name, unsigned int len, fat32_directory_t *dentry)
+static int match_long_directory(char *name, fat32_directory_t *dentry)
 {
     int i, j = 0;
+    int len = strlen(name);
     fat32_long_directory_t *ldentry = (fat32_long_directory_t *)dentry - 1;
     while (ldentry->LDIR_Attr == ATTR_LONG_NAME && ldentry->LDIR_Ord != 0xe5) {
         for (i = 0; i < 5; i++) {
@@ -150,129 +149,188 @@ static int match_long_directory(char *name, unsigned int len, fat32_directory_t 
             goto match_success;
         ldentry--;
     }
-    match_fail:
+match_fail:
     return 0;
-    match_success:
+match_success:
     return 1;
 }
 
-fat32_directory_t * lookup(char *name, int len, fat32_directory_t *dentry, int flags)
+/*
+ * 根据FAT32文件系统的目录项entry，为de创建de->d_inode
+ */
+static struct inode *make_inode(fat32_directory_t *entry, struct dentry *de)
+{
+	struct inode *node;
+
+	node = (struct inode *)kmalloc(sizeof(struct inode), 0);
+	assert(node != NULL);
+	list_add(&node->i_sb_list, &de->d_sb->s_inodes);
+	node->i_ino = entry->DIR_FstClusHI << 16 | entry->DIR_FstClusLO;
+	atomic_set(1, &node->i_count);
+	node->i_op = &fat32_inode_operations;
+	spin_init(&node->i_lock);
+	node->i_size = entry->DIR_FileSize;
+	node->i_sb = de->d_sb;
+	node->i_state = 0;
+	node->i_private = NULL;
+	return node;
+}
+
+/* 从节点dir中根据目录项de中的文件名找出对应的文件，并为de创建de->d_inode。若找不到，
+ * 则返回NULL
+ */
+static struct dentry *lookup(struct inode *dir, struct dentry *de)
 {
     fat32_directory_t *next_dentry, *p;
+    struct fat32_private_info *private;
     unsigned int cluster;
     unsigned long sector;
     unsigned char *buf;
     int i;
 
-    buf = (unsigned char *)malloc(bytes_per_clus);
-    cluster = (dentry->DIR_FstClusHI << 16 | dentry->DIR_FstClusLO) & 0x0fffffff;
-    next_cluster:
-    sector = first_data_sector + (cluster - 2) * boot_sector.BPB_SecPerClus;
-    dev_read(sector, boot_sector.BPB_SecPerClus, buf);
+    private = dir->i_sb->s_fs_info;
+    buf = (unsigned char *)kmalloc(private->bytes_per_clus, 0);
+    cluster = dir->i_ino; /* ino为文件的第一个簇的簇号 */
+next_cluster:
+    sector = private->data_first_sector + (cluster - 2) * private->sector_per_clus;
+    dev_read(sector, private->sector_per_clus, buf);
 
     p = (fat32_directory_t *)buf;
-    for (i = 0; i < bytes_per_clus; i += 32, p++) {
+    for (i = 0; i < private->bytes_per_clus; i += 32, p++) {
         if (p->DIR_Attr == ATTR_LONG_NAME)
             continue;
-        if (p->DIR_Name[0] == 0xe5 || p->DIR_Name[0] == 0x00 || p->DIR_Name[0] == 0x05)
+        if (p->DIR_Name[0] == 0xe5 || p->DIR_Name[0] == 0x00 ||
+            p->DIR_Name[0] == 0x05)
             continue;
-        if (match_long_directory(name, len, p) || match_director(name, len, p)) {
-            next_dentry = (fat32_directory_t *)malloc(sizeof(fat32_directory_t));
+        if (match_long_directory(de->d_name, p) ||
+            match_director(de->d_name, p)) {
+            next_dentry =
+                (fat32_directory_t *)kmalloc(sizeof(fat32_directory_t), 0);
             *next_dentry = *p;
-            free(buf);
-            return next_dentry;
+            goto founded;
         }
     }
-    cluster = get_next_cluster(cluster);
+    cluster = get_next_cluster(private, cluster);
     if (cluster < 0x0ffffff7)
         goto next_cluster;
-    free(buf);
+    kfree(buf);
     return NULL;
+founded:
+    kfree(buf);
+    de->d_inode = make_inode(next_dentry, de);
+    return de;
 }
 
-fat32_directory_t * path_walk(char *path, int flags)
+struct super_operations fat32_super_operations = {
+
+};
+
+struct dentry_operations fat32_dentry_operations = {
+
+};
+
+struct inode_operations fat32_inode_operations = {
+	.lookup = lookup,
+};
+
+static struct super_block *fat32_get_sb(struct file_system_type *fs, void *info)
 {
-    char *name, *p;
-    int len;
-    fat32_directory_t *parent, *next;
+	disk_partition_table_t *dpt;
+	disk_partition_table_entry_t *dpte;
+	fat32_boot_sector_t *boot_sector;
+	fat32_fs_info_t *fs_info;
+	struct fat32_private_info *private;
+	struct super_block *sb;
+	struct dentry *s_root;
+	struct inode *d_inode;
 
-    p = path;
-    while (*p == '/')
-        p++;
-    if (!*p)
-        return NULL;
+	dpt = (disk_partition_table_t *)kmalloc(512, 0);
+	boot_sector = (fat32_boot_sector_t *)kmalloc(sizeof(fat32_boot_sector_t), 0);
+	fs_info = (fat32_fs_info_t *)kmalloc(sizeof(fat32_fs_info_t), 0);
+    private = (struct fat32_private_info *)kmalloc(sizeof(struct fat32_private_info), 0);
+	sb = (struct super_block *)kmalloc(sizeof(struct super_block), 0);
+	s_root = (struct dentry *)kmalloc(sizeof(struct dentry), 0);
+	d_inode = (struct inode *)kmalloc(sizeof(struct inode), 0);
 
-    parent = (fat32_directory_t *)malloc(sizeof(fat32_directory_t));
-    parent->DIR_FstClusLO = boot_sector.BPB_RootClus & 0xffff;
-    parent->DIR_FstClusHI = (boot_sector.BPB_RootClus >> 16) & 0x0fff;
+	dev_read(0, 1, dpt);
+	dpte = &dpt->DPTE[0];
 
-    while (1) {
-        name = p;
-        len = 0;
-        while (*p && *p != '/') {
-            p++;
-            len++;
-        }
+	dev_read(dpte->start_LBA, 1, boot_sector);
+	dev_read(dpte->start_LBA + boot_sector->BPB_FSInfo, 1, fs_info);
+    private->start_sector = dpte->start_LBA;
+    private->sector_count = dpte->sectors_limit;
+    private->sector_per_clus = boot_sector->BPB_SecPerClus;
+    private->bytes_per_clus = boot_sector->BPB_SecPerClus * boot_sector->BPB_BytesPerSec;
+    private->bytes_per_sector = boot_sector->BPB_BytesPerSec;
+    private->data_first_sector = dpte->start_LBA + boot_sector->BPB_RsvdSecCnt +
+                            boot_sector->BPB_FATSz32 * boot_sector->BPB_NumFATs;
+    private->fat1_first_sector = dpte->start_LBA + boot_sector->BPB_RsvdSecCnt;
+    private->sector_per_fat = boot_sector->BPB_FATSz32;
+    private->num_of_fats = boot_sector->BPB_NumFATs;
+    private->fsinfo_sector_infat = boot_sector->BPB_FSInfo;
+    private->bootsector_bk_infat = boot_sector->BPB_BkBootSec;
+    private->first_cluster = boot_sector->BPB_RootClus;
 
-        next = lookup(name ,len, parent, flags);
+	sb->s_blocksize = private->bytes_per_sector;
+	sb->s_type = fs;
+	sb->s_op = &fat32_super_operations;
+	sb->s_root = s_root;
+	sb->s_fs_info = private;
+	list_head_init(&sb->s_inodes);
+	list_head_init(&sb->s_dirty);
 
-        if (next == NULL) {
-            free(parent);
-            return NULL;
-        }
+	atomic_set(1, &s_root->d_count);
+	s_root->d_flags = 0;
+	spin_init(&s_root->d_lock);
+	s_root->d_inode = d_inode;
+	s_root->d_parent = NULL;
+	strcpy(s_root->d_name, "/");
+	list_head_init(&s_root->d_child);
+	list_head_init(&s_root->d_subdirs);
+	s_root->d_op = &fat32_dentry_operations;
+	s_root->d_sb = sb;
+	s_root->d_private = NULL;
 
-        if (!*p) {
-            break;
-        }
+	list_add(&d_inode->i_sb_list, &sb->s_inodes);
+	list_head_init(&d_inode->i_denty);
+	d_inode->i_ino =
+		boot_sector->BPB_RootClus; // 以根目录的第一个簇的簇号作为ino
+	atomic_set(1, &d_inode->i_count);
+	d_inode->i_op = &fat32_inode_operations;
+	spin_init(&d_inode->i_lock);
+	d_inode->i_size = sizeof(struct super_block); // 暂定为超级块大小
+	d_inode->i_sb = sb;
+	d_inode->i_state = 0;
+	d_inode->i_private = NULL;
 
-        while (*p == '/')
-            p++;
-        if (!*p)
-            break;
+	kfree(dpt);
+	kfree(dpte);
+	kfree(boot_sector);
+	kfree(fs_info);
 
-        free(parent);
-        parent = next;
-    }
-
-    return next;
+	return sb;
 }
+
+static void fat32_put_sb(struct super_block *sb)
+{
+	kfree(sb->s_fs_info);
+	kfree(sb->s_root);
+	kfree(sb);
+}
+
+struct file_system_type fat32_fs_type = {
+	.name = "FAT32",
+	.fs_flags = 0,
+	.get_sb = fat32_get_sb,
+	.put_sb = fat32_put_sb,
+};
 
 void fat32_init(void)
 {
-    blkdev = IDE_device_operation;
-    char *p;
-    int i;
-    fat32_directory_t *dentry = NULL;
-    dev_read(0, 1, &dpt);
-    printk("dpt0 start LBA: %d\n", dpt.DPTE[0].start_LBA);
-    dev_read(dpt.DPTE[0].start_LBA, 1, &boot_sector);
-    printk("%s %d %d ", boot_sector.BS_OEMName, (int)boot_sector.BPB_TotSec32, (int)boot_sector.BPB_SecPerClus);
-    for (p = (char *)boot_sector.BS_FilSysType, i = 0; i < 8; i++, p++)
-        printk("%c", *p);
-    printk("\n");
-    dev_read(dpt.DPTE[0].start_LBA + boot_sector.BPB_FSInfo, 1, &fs_info);
-    printk("0x%x 0x%x 0x%x 0x%x\n", fs_info.FSI_LeadSig, fs_info.FSI_StrucSig, fs_info.FSI_Free_Count, fs_info.FSI_Nxt_Free);
+	blkdev = IDE_device_operation;
 
-    first_data_sector = dpt.DPTE[0].start_LBA + boot_sector.BPB_RsvdSecCnt + boot_sector.BPB_FATSz32 * boot_sector.BPB_NumFATs;
-    first_fat1_sector = dpt.DPTE[0].start_LBA + boot_sector.BPB_RsvdSecCnt;
-    first_fat2_sector = first_fat1_sector + boot_sector.BPB_FATSz32;
-    bytes_per_clus = boot_sector.BPB_SecPerClus * boot_sector.BPB_BytesPerSec;
-    printk("%d %d %d %d\n", first_data_sector, first_fat1_sector, first_fat2_sector, bytes_per_clus);
-
-    dentry = path_walk("/abc/b.txt", 0);
-    if (dentry != NULL) {
-        for (i = 0; i < 11; i++)
-            printk("%c", dentry->DIR_Name[i]);
-        printk("\n");
-        printk("found: %d %d %d\n", dentry->DIR_FstClusHI, dentry->DIR_FstClusLO, dentry->DIR_FileSize);
-        char *buf = (char *)malloc(bytes_per_clus);
-        unsigned long cluster = (dentry->DIR_FstClusHI << 16 | dentry->DIR_FstClusLO) & 0x0fffffff;
-        unsigned long sector = first_data_sector + (cluster - 2) * boot_sector.BPB_SecPerClus;
-        dev_read(sector, 1, buf);
-        for (i = 0; i < dentry->DIR_FileSize; i++)
-            printk("%c", buf[i]);
-    } else {
-        printk("Don't found\n");
-    }
+	if (register_filesystem(&fat32_fs_type) != 0) {
+		panic("file system register error\n");
+		return;
+	}
 }
-

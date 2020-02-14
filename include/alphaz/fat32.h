@@ -5,29 +5,6 @@
 
 void fat32_init(void);
 
-/* 硬盘分区表表项 */
-struct disk_partition_table_entry
-{
-	unsigned char   flags;
-	unsigned char   start_head;
-	unsigned short  start_sector:6, start_cylinder:10;
-	unsigned char   type;
-	unsigned char   end_head;
-	unsigned short  end_sector:6, end_cylinder:10;
-	unsigned int    start_LBA;
-	unsigned int    sectors_limit;
-} __packed;
-typedef struct disk_partition_table_entry disk_partition_table_entry_t;
-
-/* 硬盘分区表，适用于主引导分区(MBR) */
-struct disk_partition_table
-{
-	unsigned char BS_Reserved[446];
-	struct disk_partition_table_entry DPTE[4];
-	unsigned short BS_TrailSig;
-} __packed;
-typedef struct disk_partition_table disk_partition_table_t;
-
 /* 引导扇区(DBR) */
 struct fat32_boot_sector
 {
@@ -122,5 +99,28 @@ struct fat32_long_directory
 	unsigned short  LDIR_Name3[2];
 } __packed;
 typedef struct fat32_long_directory fat32_long_directory_t;
+
+struct fat32_private_info {
+	unsigned long start_sector;
+	unsigned long sector_count;
+	unsigned int sector_per_clus;
+	unsigned int bytes_per_clus;
+	unsigned int bytes_per_sector;
+	unsigned long data_first_sector;
+	unsigned long fat1_first_sector;
+	unsigned long sector_per_fat;
+	unsigned long num_of_fats;
+
+	unsigned long fsinfo_sector_infat; /* fsinfo的起始位置，相对于文件系统 */
+	unsigned long bootsector_bk_infat; /* bootsector备份位置 */
+
+    unsigned long first_cluster;
+	unsigned long dentry_location;
+	unsigned long dentry_position;
+	unsigned short creat_date;
+	unsigned short creat_time;
+	unsigned short write_date;
+	unsigned short write_time;
+};
 
 #endif
