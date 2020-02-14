@@ -12,7 +12,7 @@
  */
 int printf(const char *fmt, ...)
 {
-    char buf[128];
+    static char buf[1024];
     va_list args;
     int i;
 
@@ -25,6 +25,9 @@ int printf(const char *fmt, ...)
 }
 
 
+static unsigned char printk_color[] = {
+    0x0f, 0x0f, 0x0f, 0x0c, 0x0f, 0x0f, 0x0f, 0x0f,
+};
 
 /**
  * printk - 内核态字符串格式化输出函数
@@ -33,14 +36,23 @@ int printf(const char *fmt, ...)
  */
 int printk(const char *fmt, ...)
 {
-    char buf[128];
+    static char buf[1024];
     va_list args;
+    char *p = buf;
     int i;
+    int level;
 
     va_start(args, fmt);
     i = vsprintf(buf, fmt, args);
-    tty_write(buf, i, 0x0f);
     va_end(args);
 
+    if (p[0] == '<' && p[1] >= '0' && p[1] <= '7' && p[2] == '>') {
+        level = p[1] - '0';
+        p += 3;
+        i -= 3;
+    }
+    else
+        level = 6;  /* infomation level */
+    tty_write(p, i, printk_color[level]);
     return i;
 }
