@@ -15,8 +15,7 @@
 extern struct super_operations fat32_super_operations;
 extern struct dentry_operations fat32_dentry_operations;
 extern struct inode_operations fat32_inode_operations;
-
-int fd;
+extern struct file_operations fat32_file_operations;
 
 static struct block_device_operations blkdev;
 
@@ -26,7 +25,7 @@ static void dev_read(unsigned long sector, unsigned long nsect, void *buf)
     blkdev.transfer(BLK_READ, sector, nsect, buf);
 }
 
-unsigned int get_next_cluster(struct fat32_private_info *info,
+static unsigned int get_next_cluster(struct fat32_private_info *info,
                               unsigned int entry)
 {
     unsigned int buf[128];
@@ -168,6 +167,7 @@ static struct inode *make_inode(fat32_directory_t *entry, struct dentry *de)
 	node->i_ino = entry->DIR_FstClusHI << 16 | entry->DIR_FstClusLO;
 	atomic_set(1, &node->i_count);
 	node->i_op = &fat32_inode_operations;
+    node->i_fop = &fat32_file_operations;
 	spin_init(&node->i_lock);
 	node->i_size = entry->DIR_FileSize;
 	node->i_sb = de->d_sb;
@@ -175,6 +175,24 @@ static struct inode *make_inode(fat32_directory_t *entry, struct dentry *de)
 	node->i_private = NULL;
 	return node;
 }
+
+static struct inode * alloc_inode(struct super_block *sb) { return NULL; }
+static void destory_inode(struct inode *inode) {}
+static void write_inode(struct inode *inode) {}
+static void delete_inode(struct inode *inode) {}
+static void write_super(struct super_block *sb) {}
+static void put_super(struct super_block *sb) {}
+
+struct super_operations fat32_super_operations = {
+    .alloc_inode = alloc_inode,
+    .destory_inode = destory_inode,
+    .write_inode = write_inode,
+    .delete_inode = delete_inode,
+    .write_super = write_super,
+    .put_super = put_super,
+};
+
+static int create(struct inode *inode, struct dentry *dentry, int mode) { return -1; }
 
 /* 从节点dir中根据目录项de中的文件名找出对应的文件，并为de创建de->d_inode。若找不到，
  * 则返回NULL
@@ -221,16 +239,108 @@ founded:
     return de;
 }
 
-struct super_operations fat32_super_operations = {
+static int mkdir(struct inode *dir, struct dentry *dentry, int mode) { return -1; }
+static int rmdir(struct inode *dir, struct dentry *dentry) { return -1; }
+static int rename(struct inode *old_dir, struct dentry *d1,
+                  struct inode *new_dir, struct dentry *d2)
+{
+    return -1;
+}
 
-};
-
-struct dentry_operations fat32_dentry_operations = {
-
-};
+static int getattr(struct dentry *dentry, unsigned long mode) { return -1; }
+static int setattr(struct dentry *dentry, unsigned long mode) { return -1; }
 
 struct inode_operations fat32_inode_operations = {
+    .create = create,
 	.lookup = lookup,
+    .mkdir = mkdir,
+    .rmdir = rmdir,
+    .rename = rename,
+    .getattr = getattr,
+    .setattr = setattr,
+};
+
+static int d_compare(struct dentry *dentry, char *name1, char *name2) { return -1; }
+static int d_release(struct dentry *dentry) { return -1; }
+static int d_iput(struct dentry *dentry, struct inode *inode) { return -1; }
+
+struct dentry_operations fat32_dentry_operations = {
+    .d_compare = d_compare,
+    .d_release = d_release,
+    .d_iput = d_iput,
+};
+
+static loff_t lseek(struct file *filp, loff_t offset, int whence)
+{
+    assert(filp != NULL);
+    switch (whence) {
+    case SEEK_SET:
+        filp->f_pos = offset;
+        break;
+    case SEEK_CUR:
+        filp->f_pos += offset;
+        break;
+    case SEEK_END:
+        filp->f_pos = filp->f_dentry->d_inode->i_size + offset;
+        break;
+    default:
+        break;
+    }
+    return filp->f_pos;
+}
+
+static ssize_t read(struct file *filp, char *buf, size_t size, loff_t pos)
+{
+    struct fat32_private_info *private;
+    unsigned long index, offset, clus, sector, size1, count;
+    char *buffer;
+    int i;
+
+    assert(filp != NULL);
+    if (pos >= filp->f_dentry->d_inode->i_size)  /* 大于文件的大小 */
+        return -1;
+
+    private = filp->f_dentry->d_sb->s_fs_info;
+    index = pos / private->bytes_per_clus;
+    offset = pos % private->bytes_per_clus;
+    clus = filp->f_dentry->d_inode->i_ino;      /* 第一个簇 */
+    count = 0;
+    buffer = (char *)kmalloc(sizeof(private->bytes_per_clus), 0);
+    assert(buffer != NULL);
+
+    for (i = 0; i < index; i++)
+        clus = get_next_cluster(private, clus);
+
+    if (pos + size >= filp->f_dentry->d_inode->i_size)
+        size = filp->f_dentry->d_inode->i_size - pos;
+
+    do {
+        sector = private->data_first_sector + (clus - 2) * private->sector_per_clus;
+        dev_read(sector, private->sector_per_clus, buffer);
+
+        size1 = (private->bytes_per_clus - offset) > size ? size :
+                    private->bytes_per_clus - offset;
+        memcpy(buf, buffer + offset, size1);
+
+        buf = buf + size1;
+        offset = 0;
+        size -= size1;
+        count += size1;
+        clus = get_next_cluster(private, clus);
+    } while(size > 0);
+    return count;
+}
+
+static ssize_t write(struct file *filp, const char *buf, size_t size, loff_t pos) { return -1; }
+static int open(struct inode *inode, struct file *filp) { return -1; }
+static int release(struct inode *inode, struct file *filp) { return -1; }
+
+struct file_operations fat32_file_operations = {
+    .lseek = lseek,
+    .read = read,
+    .write = write,
+    .open = open,
+    .release = release,
 };
 
 static struct super_block *fat32_get_sb(struct file_system_type *fs, void *info)
@@ -297,8 +407,9 @@ static struct super_block *fat32_get_sb(struct file_system_type *fs, void *info)
 		boot_sector->BPB_RootClus; // 以根目录的第一个簇的簇号作为ino
 	atomic_set(1, &d_inode->i_count);
 	d_inode->i_op = &fat32_inode_operations;
+    d_inode->i_fop = &fat32_file_operations;
 	spin_init(&d_inode->i_lock);
-	d_inode->i_size = sizeof(struct super_block); // 暂定为超级块大小
+	d_inode->i_size = sizeof(struct super_block); // 节点的大小为超级块大小
 	d_inode->i_sb = sb;
 	d_inode->i_state = 0;
 	d_inode->i_private = NULL;

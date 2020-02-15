@@ -6,6 +6,11 @@
 #include <alphaz/spinlock.h>
 #include <asm/atomic.h>
 
+/* lseek调用选项 */
+#define  SEEK_SET       (1 << 0)
+#define  SEEK_CUR       (1 << 1)
+#define  SEEK_END       (1 << 2)
+
 extern struct super_block *root_sb;
 extern struct dentry *root_entry;
 
@@ -44,6 +49,7 @@ struct inode {
     unsigned long           i_ino;              /* inode号 */
     atomic_t                i_count;            /* 引用计数 */
     struct inode_operations *i_op;
+    struct file_operations  *i_fop;             /* 文件相关操作 */
     spinlock_t              i_lock;
     unsigned long           i_size;             /* 以字节为单位的文件大小 */
     struct super_block      *i_sb;              /* 相关的超级块 */
@@ -77,31 +83,35 @@ struct dentry {
 };
 
 struct dentry_operations {
-	int (*compare)(struct dentry *, char *, char *);    /* 文件名比较 */
-	int (*release)(struct dentry *);                    /* 目录项释放时调用 */
-	int (*iput)(struct dentry *, struct inode *);       /* 释放索引节点 */
+	int (*d_compare)(struct dentry *, char *, char *);    /* 文件名比较 */
+	int (*d_release)(struct dentry *);                    /* 目录项释放时调用 */
+	int (*d_iput)(struct dentry *, struct inode *);       /* 释放索引节点 */
 };
 
 struct file {
-	struct list_head        f_list;     /* 文件对象链表，用在file_struct中 */
+	struct dentry          *f_dentry;
     struct file_operations *f_op;
     spinlock_t              f_lock;
     atomic_t                f_count;    /* 引用计数 */
     unsigned int            f_flags;    /* 打开文件时指定的标志 */
     unsigned int            f_mode;     /* 文件访问模式 */
-    unsigned long           f_pos;      /* 当前文件位移量 */
+    loff_t                  f_pos;      /* 当前文件位移量 */
 };
 
 struct file_operations {
-	int (*lseek) (struct file *, int, int mode);        /* 改变文件的偏移位置 */
-    ssize_t (*read) (struct file *, char *, size_t, int offset);
-    ssize_t (*write) (struct file *, const char *, size_t, int offset);
+	loff_t (*lseek) (struct file *, loff_t, int);        /* 改变文件的偏移位置 */
+    ssize_t (*read) (struct file *, char *, size_t, loff_t);
+    ssize_t (*write) (struct file *, const char *, size_t, loff_t);
     int (*open) (struct inode *, struct file *);    /* 创建一个新的对象文件，并将其与相应的索引节点关联起来 */
     int (*release) (struct inode *, struct file *); /* 引用计数为0时，由vfs调用 */
 };
 
 int register_filesystem(struct file_system_type *);
 int mount_fs(const char *, struct super_block *);
+
+struct file * make_file(struct dentry *, int, int, size_t);
+struct dentry * make_dentry(struct dentry *, char *, size_t);
+
 struct dentry * path_walk(char *path, int flags);
 
 #endif

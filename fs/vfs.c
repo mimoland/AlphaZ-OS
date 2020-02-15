@@ -33,8 +33,38 @@ int mount_fs(const char *name, struct super_block *sb)
     return 0;
 }
 
-/* 为parent创建一个子dentry并进行必要的初始化 */
-static struct dentry * make_dentry(struct dentry *parent, char *name, size_t len)
+
+/**
+ * 创建一个file对象并进行必要的初始化
+ * @dentry: file对应的dentry结构体
+ * @flags: 文件的标识
+ * @mode: 文件的读取方式
+ * @pos: 文件的初始位置
+ */
+struct file * make_file(struct dentry *dentry, int flags, int mode, size_t pos)
+{
+    struct file *filp;
+
+    filp = (struct file *)kmalloc(sizeof(struct file), 0);
+    assert(filp != NULL);
+    filp->f_dentry = dentry;
+    filp->f_op = dentry->d_inode->i_fop;
+    spin_init(&filp->f_lock);
+    atomic_set(1, &filp->f_count);
+    filp->f_flags = flags;
+    filp->f_mode = mode;
+    filp->f_pos = 0;
+
+    return filp;
+}
+
+/**
+ * make_dentry - 为parent创建一个子dentry并进行必要的初始化
+ * @parent: 父目录项
+ * @name: 要创建的dentry的文件名
+ * @len: 文件名的长度
+ */
+struct dentry * make_dentry(struct dentry *parent, char *name, size_t len)
 {
     struct dentry *entry;
 
