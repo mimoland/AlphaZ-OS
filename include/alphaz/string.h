@@ -20,7 +20,11 @@ extern size_t strlen(const char *s);
 #endif
 
 #ifndef __HAVA_ARCH_STRCMP
-extern int strcmp(const char *str1, const char *str2)
+extern int strcmp(const char *str1, const char *str2);
+#endif
+
+#ifndef __HAVE_ARCH_STRNCMP
+extern int strncmp(const char *str1, const char *str2, size_t n);
 #endif
 
 #endif
