@@ -58,6 +58,24 @@ struct file * make_file(struct dentry *dentry, int flags, int mode, size_t pos)
     return filp;
 }
 
+/*
+ * 在缓存中寻找是否存在名为name的子目录
+ */
+struct dentry * find_dcache(struct dentry *parent, const char *name, size_t len)
+{
+    struct dentry *child;
+    size_t n;
+
+    list_for_each_entry(child, &parent->d_subdirs, d_child) {
+        n = strlen(child->d_name);
+        if (n != len)
+            continue;
+        if (!strncmp(child->d_name, name, len))
+            return child;
+    }
+    return NULL;
+}
+
 /**
  * make_dentry - 为parent创建一个子dentry并进行必要的初始化
  * @parent: 父目录项
@@ -106,9 +124,8 @@ struct dentry * path_walk(char *path, int flags)
             len++;
         }
 
-        printk("%p\n", parent);
-        child = make_dentry(parent, name, len);
-        printk("child: %p\n", child);
+        if (!(child = find_dcache(parent, name, len)))
+            child = make_dentry(parent, name, len);
         if (parent->d_inode->i_op->lookup(parent->d_inode, child) == NULL) {
             panic("cound't found file");
             free(child);
