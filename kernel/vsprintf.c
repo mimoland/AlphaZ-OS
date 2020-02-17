@@ -3,6 +3,8 @@
 #include <alphaz/stdio.h>
 #include <alphaz/string.h>
 
+#include <asm/div64.h>
+
 /* from Linux */
 #define SIGN	2		/* unsigned/signed long */
 #define SPECIAL	32		/* 0x */
@@ -10,7 +12,7 @@
 
 
 
-static char * number(char *str, char *end, unsigned long num, int base,
+static char * number(char *str, char *end, unsigned long long num, int base,
                         int type)
 {
 	char sign, tmp[66];
@@ -32,10 +34,8 @@ static char * number(char *str, char *end, unsigned long num, int base,
 
     if (num == 0)
 		tmp[i++] = '0';
-	else while (num != 0) {
-		tmp[i++] = digits[num % base];
-		num = num / base;
-	}
+	else while (num != 0)
+		tmp[i++] = digits[do_div(num, base)];
 
     if (sign) {
         if (str < end)
@@ -85,6 +85,7 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
 {
     char c, *str, *end, *s;
     int flags, base;
+    unsigned long long tmp;
     end = buf + size;
 
     for (str = buf; *fmt != 0; ++fmt) {
@@ -116,8 +117,8 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
 
         case 'p':
             flags |= SPECIAL;
-            str = number(str, end,
-                            (unsigned long)va_arg(args, void *), 16, flags);
+            tmp = (unsigned long long)(unsigned long)va_arg(args, void *);
+            str = number(str, end, tmp, 16, flags);
             continue;
 
         case '%':
@@ -147,6 +148,7 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
         }
 
         /* 这里为了方便，将所有参数都当做int处理，尽管这不正确 */
+        tmp = (unsigned long long)va_arg(args, int);
         str = number(str, end, va_arg(args, int), base, flags);
     }
     *str = 0;

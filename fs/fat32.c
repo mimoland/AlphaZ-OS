@@ -11,6 +11,7 @@
 #include <alphaz/string.h>
 
 #include <asm/bug.h>
+#include <asm/div64.h>
 
 extern struct super_operations fat32_super_operations;
 extern struct dentry_operations fat32_dentry_operations;
@@ -21,7 +22,6 @@ static struct block_device_operations blkdev;
 
 static void dev_read(unsigned long sector, unsigned long nsect, void *buf)
 {
-    printk("dev_read: sector:%d nsect:%d\n", sector, nsect);
     blkdev.transfer(BLK_READ, sector, nsect, buf);
 }
 
@@ -301,8 +301,8 @@ static ssize_t read(struct file *filp, char *buf, size_t size, loff_t pos)
         return -1;
 
     private = filp->f_dentry->d_sb->s_fs_info;
-    index = pos / private->bytes_per_clus;
-    offset = pos % private->bytes_per_clus;
+    offset = do_div(pos, private->bytes_per_clus);
+    index = pos;
     clus = filp->f_dentry->d_inode->i_ino;      /* 第一个簇 */
     count = 0;
     buffer = (char *)kmalloc(sizeof(private->bytes_per_clus), 0);

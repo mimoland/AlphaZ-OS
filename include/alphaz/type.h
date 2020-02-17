@@ -9,9 +9,7 @@ typedef unsigned int    u32;
 typedef unsigned long   u64;
 
 typedef unsigned long   size_t;
-// typedef long long       loff_t;
-/* 这里本应是long long, 但是当前并没有相关的数学库，所以无法完成64位的除法运算 */
-typedef long            loff_t;
+typedef long long       loff_t;
 typedef int             pid_t;
 
 typedef long            ssize_t;
