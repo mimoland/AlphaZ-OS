@@ -149,7 +149,7 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
 
         /* 这里为了方便，将所有参数都当做int处理，尽管这不正确 */
         tmp = (unsigned long long)va_arg(args, int);
-        str = number(str, end, va_arg(args, int), base, flags);
+        str = number(str, end, tmp, base, flags);
     }
     *str = 0;
     return (str - buf);
