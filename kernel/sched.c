@@ -2,6 +2,7 @@
  * 进程调度相关
  */
 
+#include <alphaz/bugs.h>
 #include <alphaz/sched.h>
 #include <alphaz/list.h>
 #include <alphaz/malloc.h>
@@ -170,6 +171,14 @@ static void setup_idle_process(void)
 	ts->thread.esp = NULL_STACK_MAGIC;
 	ts->mm = NULL;
 	ts->signal = 0;
+
+    ts->files = (struct files_struct *)kmalloc(sizeof(struct files_struct), 0);
+    assert(ts->files);
+    memset(ts->files, 0, sizeof(struct files_struct));
+    atomic_set(3, &ts->files->count);
+    ts->files->files[STDIN_FILENO] = stdin;
+    ts->files->files[STDOUT_FILENO] = stdout;
+    ts->files->files[STDERR_FILENO] = stderr;
 
 	idle = ts;
 

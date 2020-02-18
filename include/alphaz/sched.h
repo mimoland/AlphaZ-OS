@@ -17,10 +17,13 @@
 
 #ifndef __ASSEMBLY__
 
+#include <alphaz/fs.h>
+#include <alphaz/stdio.h>
 #include <alphaz/type.h>
 #include <alphaz/list.h>
 #include <alphaz/string.h>
 
+#include <asm/atomic.h>
 #include <asm/sched.h>
 #include <asm/cpu.h>
 
@@ -64,9 +67,14 @@ extern unsigned long volatile __ticks_data ticks;
 extern pid_t volatile __pid_data pid;
 
 #define TASK_COMM_LEN      32      /* 进程名的长度 */
-
+#define TASK_MAX_FILE      64      /* 一个进程最多打开的文件数 */
 /* 进程优先级 */
 #define  LOWEST_PRIO            9999            /* 进程的最低优先级 */
+
+struct files_struct {
+    atomic_t   count;
+    struct file *files[TASK_MAX_FILE];
+};
 
 /* 进程标示和状态标示的前面不可在定义任何变量，因为这两个变量需要在entry.S中借助偏移来访问 */
 struct task_struct
@@ -92,6 +100,8 @@ struct task_struct
     long signal;            /* 进程持有的信号 */
 
     struct list_head task;
+
+    struct files_struct *files;
 
     /*
      * TODO: 进程所用内存空间的描述，包括页表，空间大小等
