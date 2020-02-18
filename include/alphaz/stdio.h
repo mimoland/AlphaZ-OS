@@ -7,6 +7,13 @@
  */
 #include <stdarg.h>
 #include <alphaz/type.h>
+#include <alphaz/fs.h>
+
+extern struct file *stdin;
+extern struct file *stdout;
+extern struct file *stderr;
+
+void stdio_init(void);
 
 int vsprintf(char *buf, const char *fmt, va_list args);
 
