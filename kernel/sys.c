@@ -4,6 +4,7 @@
 #include <alphaz/tty.h>
 #include <alphaz/kernel.h>
 #include <alphaz/keyboard.h>
+#include <alphaz/malloc.h>
 #include <alphaz/linkage.h>
 #include <asm/unistd.h>
 
@@ -22,11 +23,10 @@ asmlinkage ssize_t sys_write(int fd, const void *buf, size_t nbytes)
     if (nbytes < 0)
         return -1;
     filp = current->files->files[fd];
-    assert(filp != NULL);
-    assert(filp->f_op != NULL);
-    assert(filp->f_op->write != NULL);
     if (filp && filp->f_op && filp->f_op->write)
         ret = filp->f_op->write(filp, buf, nbytes, filp->f_pos);
+    if(ret != -1)
+        filp->f_pos += ret;
     return ret;
 }
 
@@ -42,8 +42,59 @@ asmlinkage ssize_t sys_read(int fd, void *buf, size_t nbytes)
     filp = current->files->files[fd];
     if (filp && filp->f_op && filp->f_op->read)
         ret = filp->f_op->read(filp, buf, nbytes, filp->f_pos);
+    if (ret != -1)
+        filp->f_pos += ret;
     return ret;
 }
+
+asmlinkage int sys_open(const char *path, int oflag)
+{
+    struct dentry *de = NULL;
+    struct file *filp = NULL;
+    int fd;
+
+    if (atomic_read(&current->files->count) >= TASK_MAX_FILE)
+        goto open_faild;
+
+    de = path_walk(path, 0);
+    if (!de)
+        goto open_faild;
+
+    filp = make_file(de, 0, oflag);
+    if (!filp)
+        goto open_faild;
+
+    for (fd = 0; fd < TASK_MAX_FILE; fd++) {
+        if (!current->files->files[fd])
+            break;
+    }
+
+    atomic_inc(&current->files->count);
+    current->files->files[fd] = filp;
+    return fd;
+
+open_faild:
+    if (de) kfree(de);
+    if (filp) kfree(filp);
+    return -1;
+}
+
+asmlinkage int sys_close(int fd)
+{
+    struct file *filp;
+
+    if (fd < 0 || fd >= TASK_MAX_FILE)
+        return -1;
+    filp = current->files->files[fd];
+    current->files->files[fd] = NULL;
+    atomic_dec(&current->files->count);
+    atomic_dec(&filp->f_count);
+
+    if (!atomic_read(&filp->f_count))
+        kfree(filp);
+    return 0;
+}
+
 
 asmlinkage unsigned long sys_getpid(void)
 {

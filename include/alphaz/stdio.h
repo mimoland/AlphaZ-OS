@@ -9,6 +9,8 @@
 #include <alphaz/type.h>
 #include <alphaz/fs.h>
 
+#define EOF         0
+
 extern struct file *stdin;
 extern struct file *stdout;
 extern struct file *stderr;

@@ -39,9 +39,8 @@ int mount_fs(const char *name, struct super_block *sb)
  * @dentry: file对应的dentry结构体
  * @flags: 文件的标识
  * @mode: 文件的读取方式
- * @pos: 文件的初始位置
  */
-struct file * make_file(struct dentry *dentry, int flags, int mode, size_t pos)
+struct file * make_file(struct dentry *dentry, int flags, int mode)
 {
     struct file *filp;
 
@@ -61,7 +60,7 @@ struct file * make_file(struct dentry *dentry, int flags, int mode, size_t pos)
 /*
  * 在缓存中寻找是否存在名为name的子目录
  */
-struct dentry * find_dcache(struct dentry *parent, const char *name, size_t len)
+static struct dentry * find_dcache(struct dentry *parent, const char *name, size_t len)
 {
     struct dentry *child;
     size_t n;
@@ -103,14 +102,14 @@ struct dentry * make_dentry(struct dentry *parent, char *name, size_t len)
     return entry;
 }
 
-struct dentry * path_walk(char *path, int flags)
+struct dentry * path_walk(const char *path, int flags)
 {
     char *name, *p;
     int len;
     struct dentry *parent = root_sb->s_root;
     struct dentry *child;
 
-    p = path;
+    p = (char *)path;
     while (*p == '/')
         p++;
     if (!*p)

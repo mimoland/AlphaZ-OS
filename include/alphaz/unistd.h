@@ -13,6 +13,7 @@ extern unsigned int get_ticks(void);
 extern pid_t fork(void);
 extern ssize_t write(int fd, const void *buf, size_t n);
 extern ssize_t read(int fd, const void *buf, size_t n);
+extern int close(int fd);
 extern pid_t getpid(void);
 extern void sleep(unsigned long second);
 extern void msleep(unsigned long ms);
