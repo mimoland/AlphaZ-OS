@@ -1,3 +1,4 @@
+#include <alphaz/bugs.h>
 #include <alphaz/unistd.h>
 #include <alphaz/sched.h>
 #include <alphaz/tty.h>
@@ -13,20 +14,35 @@ asmlinkage unsigned long sys_get_ticks(void)
 
 asmlinkage ssize_t sys_write(int fd, const void *buf, size_t nbytes)
 {
-    /* TODO: 这里应该根据进程的打开的文件信息进行判断 */
-    if(fd == STDOUT_FILENO) {
-        nbytes = tty_write(buf, nbytes, 0x0f);
-    }
-    return nbytes;
+    struct file *filp;
+    int ret = -1;
+
+    if (fd < 0 || fd >= TASK_MAX_FILE)
+        return -1;
+    if (nbytes < 0)
+        return -1;
+    filp = current->files->files[fd];
+    assert(filp != NULL);
+    assert(filp->f_op != NULL);
+    assert(filp->f_op->write != NULL);
+    if (filp && filp->f_op && filp->f_op->write)
+        ret = filp->f_op->write(filp, buf, nbytes, filp->f_pos);
+    return ret;
 }
 
 asmlinkage ssize_t sys_read(int fd, void *buf, size_t nbytes)
 {
-    /* TODO: 这里应该根据进程的打开的文件信息进行判断 */
-    if(fd == STDIN_FILENO) {
-        nbytes = keyboard_read((char *)buf, nbytes);
-    }
-    return nbytes;
+    struct file *filp;
+    int ret = -1;
+
+    if (fd < 0 || fd >= TASK_MAX_FILE)
+        return -1;
+    if (nbytes < 0)
+        return -1;
+    filp = current->files->files[fd];
+    if (filp && filp->f_op && filp->f_op->read)
+        ret = filp->f_op->read(filp, buf, nbytes, filp->f_pos);
+    return ret;
 }
 
 asmlinkage unsigned long sys_getpid(void)
