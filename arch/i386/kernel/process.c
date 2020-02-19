@@ -1,3 +1,4 @@
+#include <alphaz/bugs.h>
 #include <alphaz/fork.h>
 #include <alphaz/kernel.h>
 #include <alphaz/linkage.h>
@@ -37,6 +38,23 @@ int copy_process(struct task_struct *new, struct pt_regs *regs)
 	return 0;
 }
 
+static int cpoy_mm(struct task_struct *new, int flags)
+{
+    new->mm = NULL;
+    return 0;
+}
+
+static int copy_files(struct task_struct *new, int flags)
+{
+    struct files_struct *files;
+
+    files = (struct files_struct *)kmalloc(sizeof(struct files_struct), 0);
+    assert(files != 0);
+    memcpy(files, current->files, sizeof(struct files_struct));
+    new->files = files;
+    return 0;
+}
+
 pid_t do_fork(struct pt_regs *regs, int flags, unsigned long stack_start,
 			unsigned long stack_size)
 {
@@ -52,8 +70,12 @@ pid_t do_fork(struct pt_regs *regs, int flags, unsigned long stack_start,
 	new->parent = current;
 	list_head_init(&new->children);
 	copy_process(new, regs);
-	new->mm = NULL;
+
+    if (cpoy_mm(new, flags))
+        panic("copy mm error\n");
 	new->signal = 0;
+    if (copy_files(new, flags))
+        panic("copy files error\n");
     list_add(&new->sibling, &current->children);
 	list_add_tail(&new->task, &task_head);
 	return new->pid;
