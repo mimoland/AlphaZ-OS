@@ -6,6 +6,7 @@
 #include <alphaz/sched.h>
 #include <alphaz/type.h>
 #include <asm/cpu.h>
+#include <asm/irq.h>
 #include <asm/process.h>
 
 /**
@@ -13,8 +14,14 @@
  */
 static u32 get_esp(struct task_struct *new, u32 esp)
 {
-	return (((u32) new->stack &(~(USER_STACK_SIZE - 1))) |
-			(esp & (USER_STACK_SIZE - 1)));
+    return (((u32) new->stack & (~(USER_STACK_SIZE - 1))) |
+            (esp & (USER_STACK_SIZE - 1)));
+}
+
+int copy_flags(struct task_struct *new, int flags)
+{
+    new->flags = current->flags;
+    return 0;
 }
 
 int copy_process(struct task_struct *new, struct pt_regs *regs)
@@ -22,12 +29,12 @@ int copy_process(struct task_struct *new, struct pt_regs *regs)
 	struct pt_regs *new_regs;
 
 	new->thread.esp0 = (unsigned long)kernel_stack_top(new);
-	// task->thread.cr2
+
 	new_regs = get_pt_regs(new);
-	*new_regs = *regs;
+	memcpy(new_regs, regs, sizeof(struct pt_regs));
 
 	new_regs->eax = 0;
-	if (new->flags & PF_KERNEL) {
+    if (new->flags & PF_KERNEL) {
 		new_regs->esp = (unsigned long)new_regs;
 		new->thread.eip = (unsigned long)kernel_thread_ret;
 	} else {
@@ -40,6 +47,11 @@ int copy_process(struct task_struct *new, struct pt_regs *regs)
 
 static int cpoy_mm(struct task_struct *new, int flags)
 {
+    new->stack = alloc_page(0, 1);
+    if (!new->stack)
+        return -1;
+    if (!(new->flags & PF_KERNEL))
+		memcpy(new->stack, current->stack, USER_STACK_SIZE);
     new->mm = NULL;
     return 0;
 }
@@ -50,6 +62,8 @@ static int copy_files(struct task_struct *new, int flags)
 
     files = (struct files_struct *)kmalloc(sizeof(struct files_struct), 0);
     assert(files != 0);
+    if (!files)
+        return -1;
     memcpy(files, current->files, sizeof(struct files_struct));
     new->files = files;
     return 0;
@@ -61,24 +75,44 @@ pid_t do_fork(struct pt_regs *regs, int flags, unsigned long stack_start,
 	struct task_struct *new;
 
 	new = (struct task_struct *)alloc_page(0, 1);
-	memcpy(new, current, KERNEL_STACK_SIZE);
-	new->state = TASK_RUNNING;
-	new->pid = ++global_pid;
-	new->stack = alloc_page(0, 1);
-    if (!(current->flags & PF_KERNEL))
-		memcpy(new->stack, current->stack, USER_STACK_SIZE);
-	new->parent = current;
-	list_head_init(&new->children);
-	copy_process(new, regs);
+    if (!new)
+        return -1;
 
-    if (cpoy_mm(new, flags))
+    new->state = TASK_RUNNING;
+    new->pid = ++global_pid;
+	new->prio = 1;
+    new->counter = 1;
+    new->alarm = 0;
+	new->parent = current;
+    new->signal = 0;
+
+	list_head_init(&new->children);
+	if (copy_flags(new, flags)) {
+        panic("copy flags error\n");
+        goto do_fork_failed;
+    }
+
+    if (cpoy_mm(new, flags)) {
         panic("copy mm error\n");
-	new->signal = 0;
-    if (copy_files(new, flags))
+        goto do_fork_failed;
+    }
+
+    if(copy_process(new, regs)) {
+        panic("copy process error\n");
+        goto do_fork_failed;
+    }
+
+    if (copy_files(new, flags)) {
         panic("copy files error\n");
+        goto do_fork_failed;
+    }
+    cli();
     list_add(&new->sibling, &current->children);
 	list_add_tail(&new->task, &task_head);
+    sti();
 	return new->pid;
+do_fork_failed:
+    return -1;
 }
 
 pid_t _kernel_thread(struct pt_regs *regs, int (*fn)(void), void *args,

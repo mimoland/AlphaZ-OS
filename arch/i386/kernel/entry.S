@@ -104,7 +104,7 @@ TASK_FLAGS  = 0x04
 
 ENTRY(ret_from_int)
     GET_CURRENT(%ebx)
-    andl    $NEED_SCHEDULE, TASK_FLAGS(%ebx)
+    testl    $NEED_SCHEDULE, TASK_FLAGS(%ebx)
     jnz     re_sched
     jmp     int_ret
 re_sched:
@@ -117,7 +117,6 @@ END(ret_from_int)
 
 ENTRY(ret_from_fork)
     cli
-    OPEN_8259A_PIN(0x20)
     RESTOR_ALL
     INTERRUPT_RETURN
 END(ret_from_fork)
@@ -251,7 +250,6 @@ ENTRY(system_call)
 END(system_call)
 
 ENTRY(kernel_thread_ret)
-    OPEN_8259A_PIN(0x20)
     popl    %ebx
     popl    %ecx
     popl    %edx

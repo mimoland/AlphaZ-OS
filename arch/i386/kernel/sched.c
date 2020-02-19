@@ -26,11 +26,11 @@ void setup_counter(void)
  * 由于进程控制块占一个页，每个页都是4k对其的，所以将%esp低12位变为零便是当前进程的进程控制块
  * 地址
  */
-struct task_struct * __current(void)
+inline struct task_struct * __current(void)
 {
-    u32 d0;
-    asm volatile("andl %%esp, %0":"=r"(d0):"0"(~4095));
-    return (struct task_struct *)(d0);
+    struct task_struct *cur;
+    asm volatile("andl %%esp, %0":"=r"(cur):"0"(~4095UL));
+    return cur;
 }
 
 

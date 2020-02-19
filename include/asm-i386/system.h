@@ -6,6 +6,7 @@
 
 /* 只有内核级进程才可调用此功能, 并且调用后，进程便丢失了原来的栈信息，不能再进行函数返回 */
 #define move_to_user_mode() do {                              \
+    current->flags &= ~PF_KERNEL;                             \
     unsigned long _esp = (unsigned long)user_stack_top(current);        \
     asm volatile(                                                       \
         "pushl %%ebx\n\t"                                               \
