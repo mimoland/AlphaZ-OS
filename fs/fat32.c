@@ -6,6 +6,7 @@
 #include <alphaz/bugs.h>
 #include <alphaz/fat32.h>
 #include <alphaz/fs.h>
+#include <alphaz/stdio.h>
 #include <alphaz/kernel.h>
 #include <alphaz/malloc.h>
 #include <alphaz/string.h>
@@ -297,8 +298,8 @@ static ssize_t read(struct file *filp, char *buf, size_t size, loff_t pos)
     int i;
 
     assert(filp != NULL);
-    if (pos >= filp->f_dentry->d_inode->i_size)  /* 大于文件的大小 */
-        return -1;
+    if (pos >= filp->f_dentry->d_inode->i_size)  /* 大于文件的大小, 返回EOF */
+        return EOF;
 
     private = filp->f_dentry->d_sb->s_fs_info;
     offset = do_div(pos, private->bytes_per_clus);

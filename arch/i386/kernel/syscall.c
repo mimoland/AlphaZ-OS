@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <alphaz/type.h>
 #include <alphaz/unistd.h>
+#include <alphaz/fcntl.h>
 #include <asm/unistd.h>
 #include <asm/cpu.h>
 #include <asm/io.h>
@@ -69,6 +70,15 @@ ssize_t read(int fd, const void *buf, size_t n)
                         (unsigned long)buf, (unsigned long)n);
 }
 
+int open(const char *path, int oflag)
+{
+    return __syscall(__NR_open, 2, path, oflag);
+}
+
+int close(int fd)
+{
+    return __syscall(__NR_close, 1, fd);
+}
 
 pid_t getpid(void)
 {

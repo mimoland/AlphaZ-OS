@@ -109,9 +109,9 @@ struct file_operations {
 int register_filesystem(struct file_system_type *);
 int mount_fs(const char *, struct super_block *);
 
-struct file * make_file(struct dentry *, int, int, size_t);
+struct file * make_file(struct dentry *, int, int);
 struct dentry * make_dentry(struct dentry *, char *, size_t);
 
-struct dentry * path_walk(char *path, int flags);
+struct dentry * path_walk(const char *path, int flags);
 
 #endif
