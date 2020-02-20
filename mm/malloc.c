@@ -95,3 +95,13 @@ void free(void *ptr)
     unsigned short fpn = get_fpn(ptr);
     free_page(fpn);
 }
+
+void * kmalloc(size_t size, long flags)
+{
+    return malloc(size);
+}
+
+void kfree(void *ptr)
+{
+    free(ptr);
+}

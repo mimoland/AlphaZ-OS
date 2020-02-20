@@ -2,26 +2,10 @@
 #define _ALPHAZ_KEYBOARD_H_
 
 #include <alphaz/type.h>
-
-#define KEYBOARD_BUF_SIZE   128
-
-struct keyboard_buf {
-    u8 buf[KEYBOARD_BUF_SIZE];
-    int count;               /* 缓冲区扫描码数 */
-    int head, tail;
-};
-
-
-// /* 键盘输入缓冲区，defined in keyboard.c */
-extern struct keyboard_buf kb_in;
-
-void keyboard_handle(u8);
-void setup_keyboard_irq(void);
-
-ssize_t keyboard_read(char *, size_t);
+#include <alphaz/fs.h>
 
 void keyboard_init(void);
-
+extern struct file_operations keyboard_operations;
 
 #define MAP_COLS	    3	    /* Number of columns in keymap */
 #define NR_SCAN_CODES	0x80	/* Number of scan codes (rows in keymap) */
@@ -83,7 +67,7 @@ void keyboard_init(void);
 #define INSERT		(0x1F + FLAG_EXT)	/* Insert	*/
 #define DELETE		(0x20 + FLAG_EXT)	/* Delete	*/
 #define HOME		(0x21 + FLAG_EXT)	/* Home		*/
-#define END		    (0x22 + FLAG_EXT)	/* End		*/
+#define KEY_END		    (0x22 + FLAG_EXT)	/* End		*/
 #define PAGEUP		(0x23 + FLAG_EXT)	/* Page Up	*/
 #define PAGEDOWN	(0x24 + FLAG_EXT)	/* Page Down	*/
 #define UP		    (0x25 + FLAG_EXT)	/* Up		*/
@@ -126,6 +110,5 @@ void keyboard_init(void);
 #define PAD_DEL		PAD_DOT			/* Del		*/
 
 /* Keymap for US MF-2 keyboard. defined in keyboard.c */
-extern u32 keymap[];
 
 #endif

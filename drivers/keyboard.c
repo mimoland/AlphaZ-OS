@@ -1,9 +1,22 @@
 #include <alphaz/keyboard.h>
 #include <alphaz/kernel.h>
 #include <alphaz/type.h>
+#include <alphaz/bugs.h>
+#include <alphaz/wait.h>
+#include <alphaz/spinlock.h>
 
+#include <asm/irq.h>
+#include <asm/io.h>
 
-struct keyboard_buf kb_in;
+#define KEYBOARD_BUF_SIZE   128
+
+struct {
+    char buf[KEYBOARD_BUF_SIZE];
+    int count;               /* 缓冲区扫描码数 */
+    int head, tail;
+} kb_buf;
+
+wait_queue_head_t wait_head;
 
 /* Keymap for US MF-2 keyboard. */
 u32 keymap[NR_SCAN_CODES * MAP_COLS] = {
@@ -87,7 +100,7 @@ u32 keymap[NR_SCAN_CODES * MAP_COLS] = {
 /* 0x4C - MID		*/	PAD_MID,	'5',		0,
 /* 0x4D - Right		*/	PAD_RIGHT,	'6',		RIGHT,
 /* 0x4E - '+'		*/	PAD_PLUS,	'+',		0,
-/* 0x4F - End		*/	PAD_END,	'1',		END,
+/* 0x4F - End		*/	PAD_END,	'1',		KEY_END,
 /* 0x50 - Down		*/	PAD_DOWN,	'2',		DOWN,
 /* 0x51 - PgDown	*/	PAD_PAGEDOWN,   '3',		PAGEDOWN,
 /* 0x52 - Insert	*/	PAD_INS,	'0',		INSERT,
@@ -139,63 +152,76 @@ u32 keymap[NR_SCAN_CODES * MAP_COLS] = {
 };
 
 
-void keyboard_handle(u8 code)
+static inline void init_buf(void)
 {
-    if (kb_in.count < KEYBOARD_BUF_SIZE) {
-        kb_in.buf[kb_in.head] = code;
-        kb_in.head = (kb_in.head + 1) % KEYBOARD_BUF_SIZE;
-        kb_in.count++;
-    }
+    kb_buf.count = kb_buf.head = kb_buf.tail = 0;
+    memset(kb_buf.buf, 0, KEYBOARD_BUF_SIZE);
 }
 
-
+static void keyboard_handle(struct pt_regs *regs, unsigned no)
+{
+    if (kb_buf.count < KEYBOARD_BUF_SIZE) {
+        kb_buf.buf[kb_buf.head] = inb(0x60);
+        kb_buf.head = (kb_buf.head + 1) % KEYBOARD_BUF_SIZE;
+        kb_buf.count++;
+        wake_up(&wait_head);
+        current->flags |= NEED_SCHEDULE;
+    }
+}
 
 static int shift;
 /**
  * 解析扫描码
  */
-ssize_t keyboard_read(char *buf, size_t n)
+static ssize_t kb_read(struct file *filp, char *buf, size_t n, loff_t pos)
 {
-    u8 scan_code;
+    unsigned char scan_code;
     int make;       /* 是否为扫描码 */
 
-    if (kb_in.count > 0) {
-        scan_code = kb_in.buf[kb_in.tail];
-        kb_in.tail = (kb_in.tail + 1) % KEYBOARD_BUF_SIZE;
-        kb_in.count--;
+next_code:
+    if (!kb_buf.count)
+        sleep_on(&wait_head);
 
-        /* 解析扫描码 */
-        if (scan_code == 0xe1) {
+    scan_code = kb_buf.buf[kb_buf.tail];
+    kb_buf.tail = (kb_buf.tail + 1) % KEYBOARD_BUF_SIZE;
+    kb_buf.count--;
 
-        } else if (scan_code == 0xe0) {
+    /* 解析扫描码 */
+    if (scan_code == 0xe1) {
+        goto next_code;
+    } else if (scan_code == 0xe0) {
+        goto next_code;
+    } else {
+        if (scan_code == 0x2a || scan_code == 0x36) {
+            shift = 1;
+            goto next_code;
+        } else if (scan_code == 0xaa || scan_code == 0xb6) {
+            shift = 0;
+            goto next_code;
+        }
 
-        } else {
-            if (scan_code == 0x2a || scan_code == 0x36) {
-                shift = 1;
-                return 0;
-            } else if (scan_code == 0xaa || scan_code == 0xb6) {
-                shift = 0;
-                return 0;
-            }
+        make = (scan_code & FLAG_BREAK ? 0 : 1);
 
-            make = (scan_code & FLAG_BREAK ? 0 : 1);
-
-            if (make) {
-                *buf = keymap[(scan_code & 0x7F) * MAP_COLS + shift];
-                return 1;
-            }
+        if (make) {
+            *buf = keymap[(scan_code & 0x7F) * MAP_COLS + shift];
+            return 1;
         }
     }
     return 0;
 }
 
+struct file_operations keyboard_operations = {
+    .read = kb_read,
+};
 
 /**
  * 键盘处理初始化
  */
 void keyboard_init(void)
 {
-    kb_in.count = kb_in.head = kb_in.tail = 0;
+    init_buf();
+    init_wait_queue_head(&wait_head);
     shift = 0;
-    setup_keyboard_irq();
+    if (register_irq(0x21, keyboard_handle))
+        panic("keyboard register error\n");
 }

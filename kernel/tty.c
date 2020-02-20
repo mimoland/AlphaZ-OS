@@ -5,6 +5,7 @@
 #include <alphaz/unistd.h>
 #include <alphaz/keyboard.h>
 #include <alphaz/string.h>
+#include <alphaz/bugs.h>
 #include <asm/bug.h>
 #include <asm/irq.h>
 #include <asm/tty.h>
@@ -123,17 +124,17 @@ void tty_task(void)
 
     print_info();
 
-    while (1) {
-        // delay(1);               /*fix me，为什么这里必须延时 */
-        if (read(STDIN_FILENO, &code, 1)) {
-            if (code == '\n') {
-                printf("\n");
-                command_exec(&buf);
-                printf("sh:>");
-            } else {
-                printf("%c", code);
-                command_add(&buf, code);
-            }
+loop:
+    while (read(STDIN_FILENO, &code, 1)) {
+        if (code == '\n') {
+            printf("\n");
+            command_exec(&buf);
+            printf("sh:>");
+        } else {
+            printf("%c", code);
+            command_add(&buf, code);
         }
     }
+    // panic("tty_task exit\n");
+    goto loop;
 }

@@ -11,19 +11,6 @@ struct file *stdin;
 struct file *stdout;
 struct file *stderr;
 
-static ssize_t stdin_read(struct file *filp, char *buf, size_t n, loff_t pos)
-{
-    return keyboard_read(buf, n);
-}
-
-static struct file_operations stdin_operations = {
-    .lseek = NULL,
-    .read = stdin_read,
-    .write = NULL,
-    .open = NULL,
-    .release = NULL,
-};
-
 static loff_t stdout_lseek(struct file *filp, loff_t off, int whence)
 {
     return -1;
@@ -73,7 +60,9 @@ static struct file * make_dev_file(struct file_operations *fo)
 
 void stdio_init(void)
 {
-    stdin = make_dev_file(&stdin_operations);
+    stdin = make_dev_file(&keyboard_operations);
+    keyboard_init();
+
     stdout = make_dev_file(&stdout_operations);
     stderr = make_dev_file(&stderr_operations);
 }

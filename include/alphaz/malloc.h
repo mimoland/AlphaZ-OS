@@ -9,4 +9,7 @@ void * malloc(size_t);
 
 void free(void *);
 
+void * kmalloc(size_t, long);
+void kfree(void *);
+
 #endif
