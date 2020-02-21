@@ -101,6 +101,7 @@ struct task_struct
 
     struct list_head task;
 
+    struct dentry *cwd;
     struct files_struct *files;
 
     /*

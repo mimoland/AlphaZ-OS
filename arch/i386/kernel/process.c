@@ -77,7 +77,7 @@ pid_t do_fork(struct pt_regs *regs, int flags, unsigned long stack_start,
 	new = (struct task_struct *)alloc_page(0, 1);
     if (!new)
         return -1;
-
+    memset(new, 0, sizeof(struct task_struct));
     new->state = TASK_RUNNING;
     new->pid = ++global_pid;
 	new->prio = 1;
@@ -85,6 +85,7 @@ pid_t do_fork(struct pt_regs *regs, int flags, unsigned long stack_start,
     new->alarm = 0;
 	new->parent = current;
     new->signal = 0;
+    new->cwd = current->cwd;
 
 	list_head_init(&new->children);
 	if (copy_flags(new, flags)) {

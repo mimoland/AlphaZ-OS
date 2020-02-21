@@ -95,6 +95,56 @@ asmlinkage int sys_close(int fd)
     return 0;
 }
 
+asmlinkage int sys_chdir(const char *path)
+{
+    struct dentry *de;
+
+    if (!strcmp(path, ".."))
+        de = current->cwd->d_parent;
+    else if(!strcmp(path, "."))
+        return 0;
+    else
+        de = path_walk(path, 0);
+
+    if (de == NULL)
+        return -1;
+    current->cwd = de;
+    return 0;
+}
+
+asmlinkage int sys_getcwd(char *buf, size_t n)
+{
+    struct dentry *cur;
+    struct dentry *tmp[16];
+    int i = 0, ret = 0, len;
+    char *p = buf;
+    cur = current->cwd;
+    if (cur == NULL)
+        return -1;
+
+    while (cur) {
+        tmp[i++] = cur;
+        if (cur != cur->d_parent)  /* 根目录的父目录可能是自己也可能为空 */
+            cur = cur->d_parent;
+        else
+            cur = NULL;
+    }
+
+    for (i = i - 1; i >= 0 && n; i--) {
+        len = strlen(tmp[i]->d_name);
+        strncpy(p, tmp[i]->d_name, n);
+        p += len < n ? len : n;
+        ret += len < n ? len : n;
+        n -= len < n ? len : n;
+
+        if (n && *(p - 1) != '/') {
+            *p++ = '/';
+            ret++;
+            n--;
+        }
+    }
+    return ret;
+}
 
 asmlinkage unsigned long sys_getpid(void)
 {

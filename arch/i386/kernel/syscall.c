@@ -80,6 +80,16 @@ int close(int fd)
     return __syscall(__NR_close, 1, fd);
 }
 
+int chdir(const char *path)
+{
+    return __syscall(__NR_chdir, 1, path);
+}
+
+int getcwd(char *buf, size_t n)
+{
+    return __syscall(__NR_getcwd, 2, buf, n);
+}
+
 pid_t getpid(void)
 {
     return __syscall(__NR_getpid, 0);

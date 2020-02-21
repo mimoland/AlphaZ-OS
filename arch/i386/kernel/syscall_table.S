@@ -22,8 +22,8 @@ ENTRY(sys_call_table)
     .long  sys_debug    /* 15 */
     .long  sys_debug
     .long  sys_debug
-    .long  sys_debug
-    .long  sys_debug
+    .long  sys_chdir
+    .long  sys_getcwd
     .long  sys_getpid    /* 20 */
     .long  sys_sleep
     .long  sys_debug
