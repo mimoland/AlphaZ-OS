@@ -5,7 +5,6 @@
 #include <alphaz/fs.h>
 
 void keyboard_init(void);
-extern struct file_operations keyboard_operations;
 
 #define MAP_COLS	    3	    /* Number of columns in keymap */
 #define NR_SCAN_CODES	0x80	/* Number of scan codes (rows in keymap) */

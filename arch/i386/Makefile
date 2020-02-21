@@ -3,7 +3,7 @@
 reldir := arch/$(ARCH)
 # 每当有新的目录加入时，需要修改该变量，子目录共用此变量，注意可能被覆盖
 # 这里没有加入boot目录的原因是boot目录有自己的Makefile，需要单独编译
-subdir := lib kernel
+subdir := lib kernel drivers
 subdir := $(addprefix $(reldir)/, $(subdir))
 
 src-arch += $(foreach dir, $(subdir), $(wildcard $(dir)/*.*))

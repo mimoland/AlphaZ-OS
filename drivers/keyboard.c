@@ -3,10 +3,13 @@
 #include <alphaz/type.h>
 #include <alphaz/bugs.h>
 #include <alphaz/wait.h>
+#include <alphaz/malloc.h>
 #include <alphaz/spinlock.h>
 
 #include <asm/irq.h>
 #include <asm/io.h>
+
+struct file *stdin;
 
 #define KEYBOARD_BUF_SIZE   128
 
@@ -210,7 +213,7 @@ next_code:
     return 0;
 }
 
-struct file_operations keyboard_operations = {
+static struct file_operations keyboard_operations = {
     .read = kb_read,
 };
 
@@ -222,6 +225,16 @@ void keyboard_init(void)
     init_buf();
     init_wait_queue_head(&wait_head);
     shift = 0;
+
+    stdin = (struct file *)kmalloc(sizeof(struct file), 0);
+    atomic_set(1, &stdin->f_count);
+    stdin->f_dentry = NULL;
+    stdin->f_flags = 0;
+    spin_init(&stdin->f_lock);
+    stdin->f_mode = 0;
+    stdin->f_op = &keyboard_operations;
+    stdin->f_pos = 0;
+
     if (register_irq(0x21, keyboard_handle))
         panic("keyboard register error\n");
 }

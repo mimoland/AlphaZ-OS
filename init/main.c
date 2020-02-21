@@ -4,6 +4,7 @@
 
 #include <alphaz/bugs.h>
 #include <alphaz/fat32.h>
+#include <alphaz/fcntl.h>
 #include <alphaz/fork.h>
 #include <alphaz/fs.h>
 #include <alphaz/kernel.h>
@@ -12,6 +13,7 @@
 #include <alphaz/sched.h>
 #include <alphaz/stdio.h>
 #include <alphaz/tty.h>
+#include <alphaz/console.h>
 #include <alphaz/unistd.h>
 
 #include <asm/bug.h>
@@ -20,27 +22,39 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 #include <asm/system.h>
-#include <asm/tty.h>
+
+static void test(void)
+{
+    char buf[10];
+    int i;
+    int fd = open("/abc/b.txt", O_RDONLY);
+    if (fd != -1) {
+        while(read(fd, buf, 3)) {
+            for (i = 0; i < 3; i++)
+                printf("%c", buf[i]);
+        }
+    } else {
+        printf("error\n");
+    }
+    printf("end\n");
+    if (close(fd))
+        printf("close error\n");
+}
 
 int init(void)
 {
-    static char buf[512];
-    sti();
+
     disk_init();
     fat32_init();
 
     move_to_user_mode();
 
     if (!fork()) {
-        while (1) {
-            debug();
-            delay(3);
-        }
+        tty_task();
     }
 
     while (1) {
-        debug();
-        delay(3);
+        sleep(1);
     }
 
     return 0;
@@ -53,12 +67,13 @@ void kernel_main()
     mm_init();
     keyboard_init();
     shell_init();
-    stdio_init();
+    console_init();
     task_init();
 
-    cls_screen();
-    kernel_thread(init, NULL, 0);
+    clear_screen();
+
     sti();
+    kernel_thread(init, NULL, 0);
     while (1) {
         hlt();
     }

@@ -1,14 +1,15 @@
 #include <alphaz/type.h>
-#include <alphaz/tty.h>
+#include <alphaz/console.h>
 #include <alphaz/kernel.h>
 #include <alphaz/stdio.h>
 #include <alphaz/unistd.h>
 #include <alphaz/keyboard.h>
 #include <alphaz/string.h>
 #include <alphaz/bugs.h>
+
+#include <asm/console.h>
 #include <asm/bug.h>
 #include <asm/irq.h>
-#include <asm/tty.h>
 
 #define COMMAND_BUF_SIZE 128
 
@@ -17,15 +18,14 @@ struct command_buf {
     int tail;
 };
 
-typedef int (*shell_func)(int argc, char *argv[]);
-
-struct shell {
+struct command {
     char name[128];
-    shell_func func;
+    int (*func)(int argc, char *argv[]);
 };
 
 #define SHELL_SIZE  32
-struct shell shells[SHELL_SIZE];
+
+static struct command shells[SHELL_SIZE];
 
 static int shell_help(int argc, char *argv[])
 {
@@ -58,9 +58,17 @@ static void print_info(void)
     for (p = alphaz_info; *p != 0; ++p) {
         printf("%c", *p);
     }
-    printf("sh:>");
 }
 
+static void print_prefix(void)
+{
+    static char cwdbuf[512];
+    int len;
+
+    len = getcwd(cwdbuf, 511);
+    cwdbuf[len] = 0;
+    printf("[%s]#", cwdbuf);
+}
 
 static void command_exec(struct command_buf *buf)
 {
@@ -101,40 +109,32 @@ void shell_init(void)
 }
 
 /**
- * tty_write - tty写
- * @buf:    要写的数据的缓冲区
- * @n:      数据的字节长度
- * @type:   字符颜色属性
- */
-ssize_t tty_write(const char *buf, size_t n, u8 type)
-{
-    n = __tty_write(buf, n, type);
-    return n;
-}
-
-
-/**
  * tty_task - tty任务，负责读取键盘缓冲区，将字符输出到屏幕
  */
 void tty_task(void)
 {
-    u8 code;
+    char code;
+    int len;
     struct command_buf buf;
+
     buf.tail = 0;
-
+    chdir("/user/root");
     print_info();
+    print_prefix();
 
-loop:
-    while (read(STDIN_FILENO, &code, 1)) {
+    while (1) {
+        loop:
+        len = read(STDIN_FILENO, &code, 1);
+        if (!len || len == -1)
+            goto loop;
+
         if (code == '\n') {
             printf("\n");
             command_exec(&buf);
-            printf("sh:>");
+            print_prefix();
         } else {
             printf("%c", code);
             command_add(&buf, code);
         }
     }
-    // panic("tty_task exit\n");
-    goto loop;
 }

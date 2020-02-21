@@ -2,7 +2,9 @@
 #include <alphaz/unistd.h>
 #include <alphaz/stdio.h>
 #include <alphaz/kernel.h>
-#include <alphaz/tty.h>
+#include <alphaz/console.h>
+
+#include <asm/console.h>
 
 
 /**
@@ -39,20 +41,21 @@ int printk(const char *fmt, ...)
     static char buf[1024];
     va_list args;
     char *p = buf;
-    int i;
-    int level;
+    int level, len;
 
     va_start(args, fmt);
-    i = vsprintf(buf, fmt, args);
+    len = vsprintf(buf, fmt, args);
     va_end(args);
 
     if (p[0] == '<' && p[1] >= '0' && p[1] <= '7' && p[2] == '>') {
         level = p[1] - '0';
         p += 3;
-        i -= 3;
+        len -= 3;
     }
     else
         level = 6;  /* infomation level */
-    tty_write(p, i, printk_color[level]);
-    return i;
+
+    console_write(p, len, printk_color[level]);
+
+    return len;
 }
