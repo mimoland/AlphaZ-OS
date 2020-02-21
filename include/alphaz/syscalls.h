@@ -10,7 +10,7 @@ asmlinkage pid_t sys_fork(void);
 asmlinkage ssize_t sys_read(int fd, void *buf, size_t nbytes);
 asmlinkage ssize_t sys_write(int fd, const void *buf, size_t nbytes);
 asmlinkage int sys_exit(int status);
-
+asmlinkage int sys_pause(void);
 asmlinkage int sys_chdir(const char *path);
 asmlinkage int sys_getcwd(char *buf, size_t n);
 asmlinkage unsigned long sys_getpid(void);

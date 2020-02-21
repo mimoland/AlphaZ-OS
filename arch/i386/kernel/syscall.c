@@ -80,6 +80,11 @@ int close(int fd)
     return __syscall(__NR_close, 1, fd);
 }
 
+int pause(void)
+{
+    return __syscall(__NR_pause, 0);
+}
+
 int chdir(const char *path)
 {
     return __syscall(__NR_chdir, 1, path);

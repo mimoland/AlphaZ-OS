@@ -9,6 +9,7 @@
 #define __NR_exit       5
 #define __NR_open       6
 #define __NR_close      7
+#define __NR_pause      8
 #define __NR_chdir      18
 #define __NR_getcwd     19
 #define __NR_getpid     20

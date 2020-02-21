@@ -140,6 +140,13 @@ asmlinkage long __sched sys_sleep(unsigned long type, unsigned long t)
     return 0;
 }
 
+asmlinkage int sys_pause(void)
+{
+    current->state = TASK_INTERRUPTIBLE;
+    schedule();
+    return 0;
+}
+
 asmlinkage int sys_exit(int status)
 {
     return status;

@@ -12,7 +12,7 @@ ENTRY(sys_call_table)
     .long  sys_exit    /* 5 */
     .long  sys_open
     .long  sys_close
-    .long  sys_debug
+    .long  sys_pause
     .long  sys_debug
     .long  sys_debug    /* 10 */
     .long  sys_debug
