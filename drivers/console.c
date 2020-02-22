@@ -36,6 +36,10 @@ ssize_t console_write(const char *buf, size_t n, unsigned char type)
         case '\t':
             cur = cur + 4;
             break;
+        case '\b':
+            cur = cur - 1;
+            write_char(' ', type, (unsigned short)cur);
+            break;
         default:
             write_char(buf[i], type, (unsigned short)cur);
             cur++;
