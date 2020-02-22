@@ -7,6 +7,7 @@
 #include <alphaz/spinlock.h>
 #include <alphaz/string.h>
 #include <alphaz/bugs.h>
+#include <alphaz/ctype.h>
 
 #include <asm/console.h>
 #include <asm/bug.h>
@@ -41,7 +42,10 @@ static void shell_pop(void)
     if (shell_buf.tail == 0)
         return;
     shell_buf.tail--;
-    printf("%c", ' ');
+    if (shell_buf.buf[shell_buf.tail] == '\t')  // 要删除的字符
+        printf("\b\b\b\b");
+    else
+        printf("\b");
 }
 
 static int shell_exec(void)
@@ -54,7 +58,7 @@ static int shell_exec(void)
         return 0;
 
     for (argc = 0, i = 0, flag = 1; i < shell_buf.tail; i++) {
-        if (shell_buf.buf[i] == ' ') {
+        if (isspace(shell_buf.buf[i])) {
             shell_buf.buf[i] = 0;
             flag = 1;
             continue;
@@ -187,7 +191,9 @@ void tty_task(void)
             printf("\n");
             shell_exec();
             print_prefix();
-        } else {
+        } else if (code == '\b')
+            shell_pop();
+        else {
             printf("%c", code);
             shell_append(code);
         }

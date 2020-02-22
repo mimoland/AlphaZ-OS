@@ -7,15 +7,6 @@
 #include <asm/io.h>
 
 /**
- * __sys_reboot - 系统重启
- * 0x64为Intel 8042键盘控制器所使用的端口，通过拉低8042 port2的pin0引脚可使得系统重启
- */
-void __sys_reboot(void)
-{
-    outb(0x64, 0xfe);
-}
-
-/**
  * __syscall - 用户态系统调用的总入口
  * @no: 系统调用号
  * @n:  系统调用的参数个数
