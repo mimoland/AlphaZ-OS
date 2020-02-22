@@ -109,6 +109,9 @@ struct dentry * path_walk(const char *path, int flags)
     struct dentry *parent = root_sb->s_root;
     struct dentry *child;
 
+    if (!strcmp(path, "/"))
+        return root_sb->s_root;
+
     p = (char *)path;
     while (*p == '/')
         p++;

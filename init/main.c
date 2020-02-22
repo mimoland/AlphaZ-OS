@@ -66,7 +66,6 @@ void kernel_main()
     irq_init();
     mm_init();
     keyboard_init();
-    shell_init();
     console_init();
     task_init();
 
