@@ -11,6 +11,11 @@
 #define  SEEK_CUR       (1 << 1)
 #define  SEEK_END       (1 << 2)
 
+/* 文件属性 */
+#define FS_ATTR_FILE    (1 << 0)
+#define FS_ATTR_DIR     (1 << 1)
+#define FS_ATTR_DEVICE  (1 << 2)
+
 extern struct super_block *root_sb;
 extern struct dentry *root_entry;
 
@@ -54,6 +59,7 @@ struct inode {
     unsigned long           i_size;             /* 以字节为单位的文件大小 */
     struct super_block      *i_sb;              /* 相关的超级块 */
     unsigned long           i_state;            /* 状态标志 */
+    unsigned int            i_flags;            /* inode属性 */
     void                    *i_private;         /* 文件系统私有信息 */
 };
 

@@ -6,6 +6,7 @@
 #include <alphaz/keyboard.h>
 #include <alphaz/malloc.h>
 #include <alphaz/linkage.h>
+#include <alphaz/fcntl.h>
 #include <asm/unistd.h>
 
 asmlinkage unsigned long sys_get_ticks(void)
@@ -60,6 +61,9 @@ asmlinkage int sys_open(const char *path, int oflag)
     if (!de)
         goto open_faild;
 
+    if ((oflag & O_DIRECTORY) && !(de->d_inode->i_flags & FS_ATTR_DIR))
+        return -1;
+
     filp = make_file(de, 0, oflag);
     if (!filp)
         goto open_faild;
@@ -107,6 +111,8 @@ asmlinkage int sys_chdir(const char *path)
         de = path_walk(path, 0);
 
     if (de == NULL)
+        return -1;
+    if (!(de->d_inode->i_flags & FS_ATTR_DIR))
         return -1;
     current->cwd = de;
     return 0;

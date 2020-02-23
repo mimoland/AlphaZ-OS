@@ -131,6 +131,9 @@ static int sh_cd(int argc, char *argv[])
         ret = chdir("/user/root");
     else
         ret = chdir(argv[1]);
+
+    if (ret == -1)
+        printf("error: %s is not a valid directory\n", argv[1]);
     return ret;
 }
 

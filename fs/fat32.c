@@ -173,6 +173,7 @@ static struct inode *make_inode(fat32_directory_t *entry, struct dentry *de)
 	node->i_size = entry->DIR_FileSize;
 	node->i_sb = de->d_sb;
 	node->i_state = 0;
+    node->i_flags = (entry->DIR_Attr & ATTR_DIRECTORY) ? FS_ATTR_DIR : FS_ATTR_FILE;
 	node->i_private = NULL;
 	return node;
 }
@@ -413,6 +414,7 @@ static struct super_block *fat32_get_sb(struct file_system_type *fs, void *info)
 	d_inode->i_size = sizeof(struct super_block); // 节点的大小为超级块大小
 	d_inode->i_sb = sb;
 	d_inode->i_state = 0;
+    d_inode->i_flags = FS_ATTR_DIR;
 	d_inode->i_private = NULL;
 
 	kfree(dpt);
