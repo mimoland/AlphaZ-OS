@@ -120,5 +120,5 @@ void clear_screen(void)
 void console_init(void)
 {
     stdout = make_dev_file(&console_operations);
-    stdout = make_dev_file(&console_operations);
+    stderr = make_dev_file(&console_operations);
 }

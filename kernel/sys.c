@@ -7,6 +7,7 @@
 #include <alphaz/malloc.h>
 #include <alphaz/linkage.h>
 #include <alphaz/fcntl.h>
+#include <alphaz/dirent.h>
 #include <asm/unistd.h>
 
 asmlinkage unsigned long sys_get_ticks(void)
@@ -122,7 +123,7 @@ asmlinkage int sys_getcwd(char *buf, size_t n)
 {
     struct dentry *cur;
     struct dentry *tmp[16];
-    int i = 0, ret = 0, len;
+    int i = 0, ret = 0, len, tn;
     char *p = buf;
     cur = current->cwd;
     if (cur == NULL)
@@ -136,19 +137,37 @@ asmlinkage int sys_getcwd(char *buf, size_t n)
             cur = NULL;
     }
 
-    for (i = i - 1; i >= 0 && n; i--) {
+    tn = n - 1;
+    for (i = i - 1; i >= 0 && tn; i--) {
         len = strlen(tmp[i]->d_name);
-        strncpy(p, tmp[i]->d_name, n);
-        p += len < n ? len : n;
-        ret += len < n ? len : n;
-        n -= len < n ? len : n;
+        strncpy(p, tmp[i]->d_name, tn);
+        p += len < tn ? len : tn;
+        ret += len < tn ? len : tn;
+        n -= len < tn ? len : tn;
 
-        if (n && *(p - 1) != '/') {
+        if (tn && *(p - 1) != '/') {
             *p++ = '/';
             ret++;
-            n--;
+            tn--;
         }
     }
+    *p = 0;
+    return ret;
+}
+
+asmlinkage int sys_getdents(int fd, void *dirent, int count)
+{
+    struct file *filp;
+    int ret = -1;
+
+    if (fd < 0 || fd >= TASK_MAX_FILE)
+        return -1;
+    if (count < 0)
+        return -1;
+
+    filp = current->files->files[fd];
+    if (filp && filp->f_op && filp->f_op->readdir)
+        ret = filp->f_op->readdir(filp, dirent, default_filldir);
     return ret;
 }
 

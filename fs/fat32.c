@@ -14,6 +14,10 @@
 #include <asm/bug.h>
 #include <asm/div64.h>
 
+/*
+ * 为了简单起见，不再兼容windows对目录项的创建方式，并且，对于每一个短目录项，都要有其对应的
+ * 长目录项
+*/
 extern struct super_operations fat32_super_operations;
 extern struct dentry_operations fat32_dentry_operations;
 extern struct inode_operations fat32_inode_operations;
@@ -35,123 +39,44 @@ static unsigned int get_next_cluster(struct fat32_private_info *info,
     return buf[entry & 0x7f] & 0x0fffffff;
 }
 
-/* 匹配短目录项 */
-static int match_director(char *name, fat32_directory_t *dentry)
+/* 根据短目录项获取文件名, 返回文件名的长度
+ * 传入begin是防止越界
+ */
+static int get_dname(char *buf, fat32_directory_t *de, void *begin)
 {
-    int i, j = 0;
-    char ch;
-    int len = strlen(name);
-    /* 匹配基础名 */
-    for (i = 0; i < 8; i++) {
-        switch (dentry->DIR_Name[i]) {
-        case ' ':
-            ch = dentry->DIR_Name[i] & 0xff;
-            if (dentry->DIR_Attr & ATTR_DIRECTORY) {
-                if (j < len && ch == name[j]) {
-                    j++;
-                    break;
-                } else if (j == len)
-                    continue;
-                else
-                    goto match_fail;
-            } else {
-                if (name[j] == '.')
-                    continue;
-                else
-                    goto match_fail;
-            }
-        case 'A' ... 'Z':
-        case 'a' ... 'z':
-            if (dentry->DIR_NTRes & LOWERCASE_BASE)
-                ch = (dentry->DIR_Name[i] + 32) & 0xff;
-            else
-                ch = dentry->DIR_Name[i] & 0xff;
-            if (j < len && ch == name[j]) {
-                j++;
-                break;
-            } else
-                goto match_fail;
-        case '0' ... '9':
-            ch = dentry->DIR_Name[i];
-            if (j < len && ch == name[j]) {
-                j++;
-                break;
-            } else
-                goto match_fail;
-        default:;
-        }
-    }
+    int len, i, j;
+    static short tmp[512];
 
-    /* 匹配扩展名 */
-    if (!(dentry->DIR_Attr & ATTR_DIRECTORY)) {
-        j++; // 跳过'.'
-        for (i = 8; i < 11; i++) {
-            switch (dentry->DIR_Name[i]) {
-            case ' ':
-                ch = dentry->DIR_Name[i];
-                if (j < len && ch == name[j]) {
-                    j++;
-                    break;
-                } else
-                    goto match_fail;
-            case 'A' ... 'Z':
-            case 'a' ... 'z':
-                if (dentry->DIR_NTRes && LOWERCASE_EXT)
-                    ch = (dentry->DIR_Name[i] + 32) & 0xff;
-                else
-                    ch = dentry->DIR_Name[i] & 0xff;
-                if (j < len && ch == name[j]) {
-                    j++;
-                    break;
-                } else
-                    goto match_fail;
-            case '0' ... '9':
-                ch = dentry->DIR_Name[i] & 0xff;
-                if (j < len && ch == name[j]) {
-                    j++;
-                    break;
-                } else
-                    goto match_fail;
-            default:;
-            }
-        }
+    j = 0;
+    fat32_long_directory_t *lde = (fat32_long_directory_t *)de - 1;
+    while ((void *)de >= begin && lde->LDIR_Attr == ATTR_LONG_NAME &&
+           lde->LDIR_Ord != 0xe5) {
+        for (i = 0; i < 5; i++)
+            tmp[j++] = lde->LDIR_Name1[i];
+        for (i = 0; i < 6; i++)
+            tmp[j++] = lde->LDIR_Name2[i];
+        for (i = 0; i < 2; i++)
+            tmp[j++] = lde->LDIR_Name3[i];
+        lde--;
     }
-    return 1;
-match_fail:
-    return 0;
+    for (len = 0; len < j; ) {
+        buf[len] = (char)tmp[len];
+        len++;
+        if (!buf[len - 1]) break;
+    }
+    return len; /* 包含\0的长度 */
 }
 
-/**
- * 匹配长目录项
- * @name: 要匹配的文件名(目录名)
- * @dentry: 长目录项的短目录项
- * 这里对长目录项的匹配并没有验证校验码，也并没有考虑长目录跨簇的问题
- */
-static int match_long_directory(char *name, fat32_directory_t *dentry)
+static int match_dentry(const char *name, fat32_directory_t *de, void *begin)
 {
-    int i, j = 0;
-    int len = strlen(name);
-    fat32_long_directory_t *ldentry = (fat32_long_directory_t *)dentry - 1;
-    while (ldentry->LDIR_Attr == ATTR_LONG_NAME && ldentry->LDIR_Ord != 0xe5) {
-        for (i = 0; i < 5; i++) {
-            if (j < len && ldentry->LDIR_Name1[i] != (unsigned short)name[j++])
-                goto match_fail;
-        }
-        for (i = 0; i < 6; i++) {
-            if (j < len && ldentry->LDIR_Name2[i] != (unsigned short)name[j++])
-                goto match_fail;
-        }
-        for (i = 0; i < 2; i++) {
-            if (j < len && ldentry->LDIR_Name3[i] != (unsigned short)name[j++])
-                goto match_fail;
-        }
-        if (j >= len)
-            goto match_success;
-        ldentry--;
-    }
-match_fail:
-    return 0;
-match_success:
+    static char tmp[512];
+    int len;
+
+    len = get_dname(tmp, de, begin);
+    if (len <= 0)
+        return 0;
+    if (strncmp(tmp, name, len))
+        return 0;
     return 1;
 }
 
@@ -201,7 +126,7 @@ static int create(struct inode *inode, struct dentry *dentry, int mode) { return
  */
 static struct dentry *lookup(struct inode *dir, struct dentry *de)
 {
-    fat32_directory_t *next_dentry, *p;
+    fat32_directory_t *p;
     struct fat32_private_info *private;
     unsigned int cluster;
     unsigned long sector;
@@ -211,7 +136,7 @@ static struct dentry *lookup(struct inode *dir, struct dentry *de)
     private = dir->i_sb->s_fs_info;
     buf = (unsigned char *)kmalloc(private->bytes_per_clus, 0);
     cluster = dir->i_ino; /* ino为文件的第一个簇的簇号 */
-next_cluster:
+next_clus:
     sector = private->data_first_sector + (cluster - 2) * private->sector_per_clus;
     dev_read(sector, private->sector_per_clus, buf);
 
@@ -222,22 +147,18 @@ next_cluster:
         if (p->DIR_Name[0] == 0xe5 || p->DIR_Name[0] == 0x00 ||
             p->DIR_Name[0] == 0x05)
             continue;
-        if (match_long_directory(de->d_name, p) ||
-            match_director(de->d_name, p)) {
-            next_dentry =
-                (fat32_directory_t *)kmalloc(sizeof(fat32_directory_t), 0);
-            *next_dentry = *p;
+        if (match_dentry(de->d_name, p, buf)) {
             goto founded;
         }
     }
     cluster = get_next_cluster(private, cluster);
     if (cluster < 0x0ffffff7)
-        goto next_cluster;
+        goto next_clus;
     kfree(buf);
     return NULL;
 founded:
+    de->d_inode = make_inode(p, de);
     kfree(buf);
-    de->d_inode = make_inode(next_dentry, de);
     return de;
 }
 
@@ -337,12 +258,67 @@ static ssize_t write(struct file *filp, const char *buf, size_t size, loff_t pos
 static int open(struct inode *inode, struct file *filp) { return -1; }
 static int release(struct inode *inode, struct file *filp) { return -1; }
 
+static int fat32_readdir(struct file *filp, void *dirent, filldir_t filldir)
+{
+    fat32_directory_t *p;
+    struct fat32_private_info *private;
+    unsigned long sector, clus, index, offset;
+    loff_t pos;
+    unsigned char *buffer;
+    static char name[512];
+    int len, i;
+
+    private = filp->f_dentry->d_sb->s_fs_info;
+    assert(private != NULL);
+    pos = filp->f_pos;
+    // panic("%d\n", filp->f_dentry->d_inode->i_size);
+    // if (pos >= filp->f_dentry->d_inode->i_size)
+    //     return EOF;
+
+    offset = do_div(pos, private->bytes_per_clus);  /* 簇内偏移 */
+    index = pos;                                    /* 第几个簇 */
+
+    clus = filp->f_dentry->d_inode->i_ino;          /* 起始簇 */
+    buffer = (unsigned char *)kmalloc(private->bytes_per_clus, 0);
+    assert(buffer != NULL);
+
+    for (i = 0; i < index; i++)
+        clus = get_next_cluster(private, clus);
+
+next_clus:
+    sector = private->data_first_sector + (clus - 2) * private->sector_per_clus;
+    dev_read(sector, private->sector_per_clus, buffer);
+    p = (fat32_directory_t *)buffer + (offset / 32);
+
+    for (i = offset; i < private->bytes_per_clus; i += 32, p++, filp->f_pos += 32) {
+        if (p->DIR_Attr == ATTR_LONG_NAME)
+            continue;
+        if (p->DIR_Name[0] == 0xe5 || p->DIR_Name[0] == 0x00 ||
+            p->DIR_Name[0] == 0x05)
+            continue;
+        len = get_dname(name, p, buffer);
+        if(len > 0) {
+            filp->f_pos += 32;
+            goto founded;
+        }
+    }
+    clus = get_next_cluster(private, clus);
+    if (clus < 0x0ffffff7)
+        goto next_clus;
+    kfree(buffer);
+    return NULL;
+founded:
+    kfree(buffer);
+    return filldir(dirent, name, len, 0, 0);
+}
+
 struct file_operations fat32_file_operations = {
     .lseek = lseek,
     .read = read,
     .write = write,
     .open = open,
     .release = release,
+    .readdir = fat32_readdir,
 };
 
 static struct super_block *fat32_get_sb(struct file_system_type *fs, void *info)

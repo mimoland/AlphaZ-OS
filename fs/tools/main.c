@@ -1,4 +1,5 @@
 #include "../../include/alphaz/fat32.h"
+#include "../../include/alphaz/blkdev.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <malloc.h>
@@ -44,134 +45,55 @@ unsigned int get_next_cluster(unsigned int entry)
     return buf[entry & 0x7f] & 0x0fffffff;
 }
 
-/* 匹配短目录项 */
-static int match_director(char *name, unsigned int len, fat32_directory_t *dentry)
-{
-    int i, j = 0;
-    char ch;
-    /* 匹配基础名 */
-    for (i = 0; i < 8; i++) {
-        switch (dentry->DIR_Name[i]) {
-        case ' ':
-            ch = dentry->DIR_Name[i] & 0xff;
-            if (dentry->DIR_Attr & ATTR_DIRECTORY) {
-                if (j < len && ch == name[j]) {
-                    j++;
-                    break;
-                } else if (j == len)
-                    continue;
-                else
-                    goto match_fail;
-            } else {
-                if (name[j] == '.')
-                    continue;
-                else
-                    goto match_fail;
-            }
-        case 'A' ... 'Z':
-        case 'a' ... 'z':
-            if (dentry->DIR_NTRes & LOWERCASE_BASE)
-                ch = (dentry->DIR_Name[i] + 32) & 0xff;
-            else
-                ch = dentry->DIR_Name[i] & 0xff;
-            if (j < len && ch == name[j]) {
-                j++;
-                break;
-            } else
-                goto match_fail;
-        case '0' ... '9':
-            ch = dentry->DIR_Name[i];
-            if (j < len && ch == name[j]) {
-                j++;
-                break;
-            } else
-                goto match_fail;
-        default:
-            ;
-        }
-    }
-
-    /* 匹配扩展名 */
-    if (!(dentry->DIR_Attr & ATTR_DIRECTORY)) {
-        j++; // 跳过'.'
-        for (i = 8; i < 11; i++) {
-            switch (dentry->DIR_Name[i]) {
-            case ' ':
-                ch = dentry->DIR_Name[i];
-                if (j < len && ch == name[j]) {
-                    j++;
-                    break;
-                } else
-                    goto match_fail;
-            case 'A' ... 'Z':
-            case 'a' ... 'z':
-                if (dentry->DIR_NTRes && LOWERCASE_EXT)
-                    ch = (dentry->DIR_Name[i] + 32) & 0xff;
-                else
-                    ch = dentry->DIR_Name[i] & 0xff;
-                if (j < len && ch == name[j]) {
-                    j++;
-                    break;
-                } else
-                    goto match_fail;
-            case '0' ... '9':
-                ch = dentry->DIR_Name[i] & 0xff;
-                if (j < len && ch == name[j]) {
-                    j++;
-                    break;
-                } else
-                    goto match_fail;
-            default:
-                ;
-            }
-        }
-    }
-    return 1;
-    match_fail:
-    return 0;
-}
-
-/**
- * 匹配长目录项
- * @name: 要匹配的文件名(目录名)
- * @len:  文件名或目录名的长度
- * @dentry: 长目录项的短目录项
- * 这里对长目录项的匹配并没有验证校验码，也并没有考虑长目录跨簇的问题
+/* 根据短目录项获取文件名, 返回文件名的长度
+ * 传入begin是防止越界
  */
-static int match_long_directory(char *name, unsigned int len, fat32_directory_t *dentry)
+static int get_dname(char *buf, fat32_directory_t *de, void *begin)
 {
-    int i, j = 0;
-    fat32_long_directory_t *ldentry = (fat32_long_directory_t *)dentry - 1;
-    while (ldentry->LDIR_Attr == ATTR_LONG_NAME && ldentry->LDIR_Ord != 0xe5) {
-        for (i = 0; i < 5; i++) {
-            if (j < len && ldentry->LDIR_Name1[i] != (unsigned short)name[j++])
-                goto match_fail;
-        }
-        for (i = 0; i < 6; i++) {
-            if (j < len && ldentry->LDIR_Name2[i] != (unsigned short)name[j++])
-                goto match_fail;
-        }
-        for (i = 0; i < 2; i++) {
-            if (j < len && ldentry->LDIR_Name3[i] != (unsigned short)name[j++])
-                goto match_fail;
-        }
-        if (j >= len)
-            goto match_success;
-        ldentry--;
+    int len, i, j;
+    static short tmp[512];
+
+    j = 0;
+    fat32_long_directory_t *lde = (fat32_long_directory_t *)de - 1;
+    while ((void *)de >= begin && lde->LDIR_Attr == ATTR_LONG_NAME &&
+           lde->LDIR_Ord != 0xe5) {
+        for (i = 0; i < 5; i++)
+            tmp[j++] = lde->LDIR_Name1[i];
+        for (i = 0; i < 6; i++)
+            tmp[j++] = lde->LDIR_Name2[i];
+        for (i = 0; i < 2; i++)
+            tmp[j++] = lde->LDIR_Name3[i];
+        lde--;
     }
-    match_fail:
-    return 0;
-    match_success:
+    for (len = 0; len < j; ) {
+        buf[len] = (char)tmp[len];
+        len++;
+        if (!buf[len - 1]) break;
+    }
+    return len; /* 包含\0的长度 */
+}
+
+static int match_dentry(const char *name, int nl, fat32_directory_t *de, void *begin)
+{
+    static char tmp[512];
+    int len;
+
+    len = get_dname(tmp, de, begin);
+    if (len <= 0)
+        return 0;
+    if (strncmp(tmp, name, nl < len ? nl : len))
+        return 0;
     return 1;
 }
 
-fat32_directory_t * lookup(char *name, int len, fat32_directory_t *dentry, int flags)
+fat32_directory_t * lookup(const char *name, int len, fat32_directory_t *dentry, int flags)
 {
     fat32_directory_t *next_dentry, *p;
     unsigned int cluster;
     unsigned long sector;
     unsigned char *buf;
-    int i;
+    char dname[128];
+    int i, dlen;
 
     buf = (unsigned char *)malloc(bytes_per_clus);
     cluster = (dentry->DIR_FstClusHI << 16 | dentry->DIR_FstClusLO) & 0x0fffffff;
@@ -185,7 +107,8 @@ fat32_directory_t * lookup(char *name, int len, fat32_directory_t *dentry, int f
             continue;
         if (p->DIR_Name[0] == 0xe5 || p->DIR_Name[0] == 0x00 || p->DIR_Name[0] == 0x05)
             continue;
-        if (match_long_directory(name, len, p) || match_director(name, len, p)) {
+        if (match_dentry(name, len, p, buf)) {
+            printf("%s %d %d\n", name, cluster, i);
             next_dentry = (fat32_directory_t *)malloc(sizeof(fat32_directory_t));
             *next_dentry = *p;
             free(buf);
@@ -252,35 +175,28 @@ void blkdev_init(void)
     int i;
     fat32_directory_t *dentry = NULL;
     dev_read(0, 1, &dpt);
-    printf("dpt0 start LBA: %d\n", dpt.DPTE[0].start_LBA);
+    // printf("dpt0 start LBA: %d\n", dpt.DPTE[0].start_LBA);
     dev_read(dpt.DPTE[0].start_LBA, 1, &boot_sector);
-    printf("%s %d %d ", boot_sector.BS_OEMName, (int)boot_sector.BPB_TotSec32, (int)boot_sector.BPB_SecPerClus);
-    for (p = (char *)boot_sector.BS_FilSysType, i = 0; i < 8; i++, p++)
-        printf("%c", *p);
-    printf("\n");
+    //printf("%s %d %d ", boot_sector.BS_OEMName, (int)boot_sector.BPB_TotSec32, (int)boot_sector.BPB_SecPerClus);
+    // for (p = (char *)boot_sector.BS_FilSysType, i = 0; i < 8; i++, p++)
+        // printf("%c", *p);
+    // printf("\n");
     dev_read(dpt.DPTE[0].start_LBA + boot_sector.BPB_FSInfo, 1, &fs_info);
-    printf("0x%x 0x%x 0x%x 0x%x\n", fs_info.FSI_LeadSig, fs_info.FSI_StrucSig, fs_info.FSI_Free_Count, fs_info.FSI_Nxt_Free);
+    // printf("0x%x 0x%x 0x%x 0x%x\n", fs_info.FSI_LeadSig, fs_info.FSI_StrucSig, fs_info.FSI_Free_Count, fs_info.FSI_Nxt_Free);
 
     first_data_sector = dpt.DPTE[0].start_LBA + boot_sector.BPB_RsvdSecCnt + boot_sector.BPB_FATSz32 * boot_sector.BPB_NumFATs;
     first_fat1_sector = dpt.DPTE[0].start_LBA + boot_sector.BPB_RsvdSecCnt;
     first_fat2_sector = first_fat1_sector + boot_sector.BPB_FATSz32;
     bytes_per_clus = boot_sector.BPB_SecPerClus * boot_sector.BPB_BytesPerSec;
-    printf("%ld %ld %ld %ld\n", first_data_sector, first_fat1_sector, first_fat2_sector, bytes_per_clus);
+    // printf("%ld %ld %ld %ld\n", first_data_sector, first_fat1_sector, first_fat2_sector, bytes_per_clus);
 
-    dentry = path_walk("/abc/b.txt", 0);
-    if (dentry != NULL) {
+    dentry = path_walk("/user/root", 0);
+    if (dentry) {
         for (i = 0; i < 11; i++)
             printf("%c", dentry->DIR_Name[i]);
         printf("\n");
-        printf("found: %d %d %d\n", dentry->DIR_FstClusHI, dentry->DIR_FstClusLO, dentry->DIR_FileSize);
-        char *buf = (char *)malloc(bytes_per_clus);
-        unsigned long cluster = (dentry->DIR_FstClusHI << 16 | dentry->DIR_FstClusLO) & 0x0fffffff;
-        unsigned long sector = first_data_sector + (cluster - 2) * boot_sector.BPB_SecPerClus;
-        dev_read(sector, 1, buf);
-        for (i = 0; i < dentry->DIR_FileSize; i++)
-            printf("%c", buf[i]);
     } else {
-        printf("Don't found\n");
+        printf("error\n");
     }
 }
 

@@ -3,6 +3,7 @@
 
 #include <alphaz/blkdev.h>
 #include <alphaz/list.h>
+#include <alphaz/dirent.h>
 #include <alphaz/spinlock.h>
 #include <asm/atomic.h>
 
@@ -104,12 +105,15 @@ struct file {
     loff_t                  f_pos;      /* 当前文件位移量 */
 };
 
+typedef int (*filldir_t) (void *, const char *, int, loff_t, int);
+
 struct file_operations {
 	loff_t (*lseek) (struct file *, loff_t, int);        /* 改变文件的偏移位置 */
     ssize_t (*read) (struct file *, char *, size_t, loff_t);
     ssize_t (*write) (struct file *, const char *, size_t, loff_t);
     int (*open) (struct inode *, struct file *);    /* 创建一个新的对象文件，并将其与相应的索引节点关联起来 */
     int (*release) (struct inode *, struct file *); /* 引用计数为0时，由vfs调用 */
+    int (*readdir) (struct file *, void *, filldir_t);
 };
 
 int register_filesystem(struct file_system_type *);

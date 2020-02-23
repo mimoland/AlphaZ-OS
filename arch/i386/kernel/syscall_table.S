@@ -26,7 +26,7 @@ ENTRY(sys_call_table)
     .long  sys_getcwd
     .long  sys_getpid    /* 20 */
     .long  sys_sleep
-    .long  sys_debug
+    .long  sys_getdents
     .long  sys_debug
     .long  sys_debug
     .long  sys_debug    /* 25 */

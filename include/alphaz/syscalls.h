@@ -15,6 +15,7 @@ asmlinkage int sys_chdir(const char *path);
 asmlinkage int sys_getcwd(char *buf, size_t n);
 asmlinkage unsigned long sys_getpid(void);
 asmlinkage long sys_sleep(void);
+asmlinkage int sys_getdents(int, void *, int);
 
 asmlinkage long sys_reboot(void);
 asmlinkage long sys_debug(void);

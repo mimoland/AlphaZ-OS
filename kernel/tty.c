@@ -7,6 +7,7 @@
 #include <alphaz/spinlock.h>
 #include <alphaz/string.h>
 #include <alphaz/bugs.h>
+#include <alphaz/dirent.h>
 #include <alphaz/ctype.h>
 
 #include <asm/console.h>
@@ -115,7 +116,6 @@ static int sh_pwd(int argc, char *argv[])
     n = getcwd(buf, 127);
     if (n == -1)
         return -1;
-    buf[n] = 0;
     printf("%s\n", buf);
     return 0;
 }
@@ -137,12 +137,34 @@ static int sh_cd(int argc, char *argv[])
     return ret;
 }
 
+static int sh_ls(int argc, char *argv[])
+{
+    static char buf[256];
+    struct DIR *dir;
+    struct dirent *d;
+    int len;
+
+    if (argc == 1) {
+        len = getcwd(buf, 255);
+        if (len == -1) return -1;
+        dir = opendir(buf);
+    } else
+        dir = opendir(argv[1]);
+
+    if (!dir) return -1;
+    while ((d = readdir(dir)))
+        printf(" %s\n", d->d_name);
+    closedir(dir);
+    return 0;
+}
+
 struct command __buildin_command[32] = {
     [0] = { .name = "help",     .func = sh_help,   .description = "show shell's all command", },
     [1] = { .name = "reboot",   .func = sh_reboot, .description = "reboot the system", },
     [2] = { .name = "pwd",      .func = sh_pwd,    .description = "show current work directory", },
     [3] = { .name = "cd",       .func = sh_cd,     .description = "change the work directory, only support absolute directory", },
-    [4 ... NR_SHELL_COMMAND - 1] = { .func = NULL, },
+    [4] = { .name = "ls",       .func = sh_ls,     .description = "show all files in a directory"},
+    [5 ... NR_SHELL_COMMAND - 1] = { .func = NULL, },
 };
 
 static void print_info(void)

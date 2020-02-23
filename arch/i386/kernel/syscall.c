@@ -2,6 +2,7 @@
 #include <alphaz/type.h>
 #include <alphaz/unistd.h>
 #include <alphaz/fcntl.h>
+#include <alphaz/dirent.h>
 #include <asm/unistd.h>
 #include <asm/cpu.h>
 #include <asm/io.h>
@@ -91,6 +92,10 @@ pid_t getpid(void)
     return __syscall(__NR_getpid, 0);
 }
 
+int getdents(int fd, void *dirent, int count)
+{
+    return __syscall(__NR_getdents, 3, fd, dirent, count);
+}
 
 void sleep(unsigned long second)
 {

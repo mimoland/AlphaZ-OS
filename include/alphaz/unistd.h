@@ -18,6 +18,7 @@ extern int pause(void);
 extern int chdir(const char *path);
 extern int getcwd(char *buf, size_t n);
 extern pid_t getpid(void);
+extern int getdents(int fd, void *dirent, int count);
 extern void sleep(unsigned long second);
 extern void msleep(unsigned long ms);
 extern void reboot(void);
