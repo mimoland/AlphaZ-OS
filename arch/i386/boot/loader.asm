@@ -415,7 +415,6 @@ protect_mode:
 		mov	ecx, ComeInProtModeMessage
 		call	disp_str
 
-		mov	eax, [BaseOfKernelPhyAddr + 0x18]		; 暂存入口地址
 		call	init_kernel
 
 
@@ -430,6 +429,7 @@ protect_mode:
 		call	disp_str
 
 		; 跳入内核
+		mov	eax, 0xc0100000
 		jmp	eax
 
 		hlt
@@ -483,8 +483,24 @@ _setup_mem_page_1:
 	stosd
 	add	eax, 4096
 	loop	_setup_mem_page_1
+
+	; 将内核映射到高1G地址处
+	pop 	ecx
+	push	ecx
+	cmp	ecx, 256
+	jns	_no_reset_ecx			; 总内存小于256个页目录项
+	mov	ecx, 256
+_no_reset_ecx:
+	mov	edi, BaseOfPageDir + 3072	; 指向高1GB的页目录项
+	xor	eax, eax
+	mov	eax, BaseOfPageTable | PG_P | PG_USU | PG_RWW
+_setup_mem_page_3:
+	stosd
+	add	eax, 4096
+	loop	_setup_mem_page_3
+
 	; 初始化页表
-	pop eax
+	pop 	eax
 	mov	ebx, 1024
 	mul	ebx
 	mov	ecx, eax
@@ -511,19 +527,21 @@ _setup_mem_page_end:
 init_kernel:
 	pushad
 	xor	esi, esi
-	mov	cx, [BaseOfKernelPhyAddr + 0x2c]
+	mov	cx, [BaseOfKernelPhyAddr + 0x2c]	; elf文件Program Header的数量
 	movzx	ecx, cx
-	mov	esi, [BaseOfKernelPhyAddr + 0x1c]
+	mov	esi, [BaseOfKernelPhyAddr + 0x1c]	; Program Header Table在文件中的偏移
 	add	esi, BaseOfKernelPhyAddr
 _init_kernel_begin:
 	mov	eax, [esi + 0]
 	cmp	eax, 0
 	jz	_init_kernel_no_action
-	push	dword [esi + 0x10]
-	mov	eax, [esi + 0x04]
+	push	dword [esi + 0x10]			; 程序段的长度
+	mov	eax, [esi + 0x04]			; 程序段的第一个字节在文件中的偏移
 	add 	eax, BaseOfKernelPhyAddr
 	push	eax
-	push	dword [esi + 0x08]
+	mov	eax, dword [esi + 0x08]			; 程序段的在内存中的虚拟地址
+	sub	eax, 0xc0000000				; 内核起始地址在0xc0100000, 而要放到0x100000
+	push	eax
 	call	memcpy
 	add 	esp, 12
 _init_kernel_no_action:
