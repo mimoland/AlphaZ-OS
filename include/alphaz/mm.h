@@ -3,6 +3,16 @@
 
 #include <alphaz/type.h>
 
+#define __packed __attribute__((packed))
+
+struct minfo {
+    unsigned int base_addr_low;
+    unsigned int base_addr_high;
+    unsigned int length_low;
+    unsigned int length_high;
+    unsigned int type;
+} __packed;
+
 struct mm_struct {
     unsigned long *pgd;
 };

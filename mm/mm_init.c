@@ -66,12 +66,29 @@ static void setup_mem_map(unsigned size)
 /**
  * mm_init - 初始化内存管理
  */
+#include <asm/bug.h>
 void mm_init()
 {
-    unsigned int mem_size = get_mem_size(MEM_INFO_ADDR);
-    setup_mem_map(mem_size / PRE_PAGE_SIZE);
-
-    printk("Total memory: %X byte\n", mem_size);
-    printk("Page size: %d byte, and totle setup %d memory pages\n",
-            PRE_PAGE_SIZE, mem_size / PRE_PAGE_SIZE);
+    printk("%d\n", sizeof(struct minfo));
+    struct minfo *minfo = (struct minfo *)MEM_INFO_ADDR;
+    printk("%x\n", 0xfffc0000);
+    int sum = 0;
+    printk("addr_low    addr_high    len_low    len_high    type\n");
+    while (minfo->base_addr_low != 0x3f3f3f3f &&
+           minfo->base_addr_high != 0x3f3f3f3f) {
+               disp_int(minfo->base_addr_high);
+               disp_str("  ");
+               disp_int(minfo->base_addr_low);
+               disp_str("  ");
+               disp_int(minfo->length_high);
+               disp_str("  ");
+               disp_int(minfo->length_low);
+               disp_str("  ");
+               disp_int(minfo->type);
+               disp_str("\n");
+        // if (minfo->type == 1)
+            sum += minfo->length_low;
+        minfo++;
+    }
+    printk("mem size: %x\n", sum);
 }

@@ -65,7 +65,9 @@ _start:
 
 	; 获取内存大小，供保护模式开启分页使用
 	mov	ebx, 0				; ebx = 后续值, 开始时需为 0
-	mov	di, MemCheckARDS		; es:di 指向一个地址范围描述符结构(ARDS)
+	mov	ax, 0
+	mov	es, ax				; 初始化es
+	mov	di, MemInfoAddr			; es:di 指向一个地址范围描述符结构(ARDS)数组的起始位置, 这个数组还提供给内存管理使用
 _mem_check_begin:
 	mov	eax, 0E820h			; eax = 0000E820h
 	mov	ecx, 20				; ecx = 地址范围描述符结构的大小
@@ -74,14 +76,18 @@ _mem_check_begin:
 	jc	_mem_check_fail
 	; 累加内存
 	mov	eax, [MemSizeTmpLow]
-	add	eax, [MemARDSSizeLow]
+	add	eax, [es:di + 8]			; 描述符中内存长度的低32位
 	mov	[MemSizeTmpLow], eax
 	mov	eax, [MemSizeTmpHig]
-	adc	eax, [MemARDSSizeHig]
+	adc	eax, [es:di + 12]			; 描述符中内存长度的高32位
 	mov	[MemSizeTmpHig], eax
+	add	di, 20				; 累加20个字节，指向下一个描述符
 	; 判断是否检测完
 	cmp	ebx, 0
 	jne	_mem_check_begin
+	; 内存检测完，放入一个标志结束的值
+	mov 	dword [es:di], 0x3f3f3f3f
+	mov	dword [es:di + 4], 0x3f3f3f3f
 	jmp	_mem_check_end
 _mem_check_fail:
 	mov	cx, MemCheckFailMessage
@@ -387,9 +393,6 @@ MemCheckEndMessage:	db 	'memary check is end', 0
 MemSize:	dd 	0		; 保存最后要使用的内存大小
 MemSizeTmpLow:	dd	0		; 实际内存大小的低位
 MemSizeTmpHig:	dd	0		; 实际内存大小的高位
-MemCheckARDS:	times 32 db 0		; ARDS描述符的存储位置
-MemARDSSizeLow	equ	MemCheckARDS + 8	; ARDS中内存大小的低32位
-MemARDSSizeHig	equ	MemCheckARDS + 12	; ARDS中内存大小的高32位
 
 ; ======================== 以下为保护模式 ==============================
 
@@ -418,10 +421,10 @@ protect_mode:
 
 		; 开启内存分页
 		call	setup_mem_page
-		; 将内存的大小写入0x600处供内核内存管理使用
-		mov	byte [MemInfoAddr], 0xff	; 标示
-		mov	ebx, [MemSizeProtMode]
-		mov	dword [MemInfoAddr + 2], ebx
+		; ; 将内存的大小写入0x600处供内核内存管理使用
+		; mov	byte [MemInfoAddr], 0xff	; 标示
+		; mov	ebx, [MemSizeProtMode]
+		; mov	dword [MemInfoAddr + 2], ebx
 		; 显示信息
 		mov	ecx, SetupedPageMessage
 		call	disp_str
