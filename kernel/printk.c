@@ -19,7 +19,7 @@ int printf(const char *fmt, ...)
     int i;
 
     va_start(args, fmt);
-    i = vsprintf(buf, fmt, args);
+    i = vsnprintf(buf, sizeof(buf), fmt, args);
     write(STDOUT_FILENO, buf, i);
     va_end(args);
 
@@ -44,7 +44,7 @@ int printk(const char *fmt, ...)
     int level, len;
 
     va_start(args, fmt);
-    len = vsprintf(buf, fmt, args);
+    len = vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
 
     if (p[0] == '<' && p[1] >= '0' && p[1] <= '7' && p[2] == '>') {
