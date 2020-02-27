@@ -2,6 +2,9 @@
 #define _ALPHAZ_MM_H_
 
 #include <alphaz/type.h>
+#include <alphaz/spinlock.h>
+#include <alphaz/list.h>
+#include <asm/atomic.h>
 
 #define __packed __attribute__((packed))
 
@@ -18,20 +21,26 @@ struct mm_struct {
 };
 
 /* 内存信息所在的地址，跟loader中的一致 */
-#define MEM_INFO_ADDR   0x600
+#define MEM_INFO_ADDR       0xc0000600
 
-/* mem_map的起始地址 */
-#define MEM_MAP_ADDR    0x300100
+/* 标示minfo数组结束的魔数 */
+#define MEM_INFO_END_MAGIC  0x3f3f3f3f
 
-typedef struct s_page
-{
+/* 页数组的起始地址 */
+#define PAGE_ARRAY_ADDR     0xc0300100
+
+/* 页属性 */
+#define PAGE_RESERVE        (1UL << 0)   /* 保留页，操作系统不能使用 */
+#define PAGE_DMA            (1UL << 1)
+#define PAGE_NORMAL         (1UL << 2)
+#define PAGE_HIGHMEM        (1UL << 3)
+
+struct page {
     unsigned long flags;
-    unsigned short  count;      /* 该页的引用数 */
-    unsigned int fpn;           /* 页号 */
-    void *virtual;              /* 映射的内核虚拟内存地址 */
-} Page;
-
-extern Page *mem_map;
+    atomic_t _count;        /* 使用计数 */
+    struct list_head list;  /* 页块列表 */
+    void *virtual;          /* 内核虚拟地址，为NULL为高端内存 */
+};
 
 void mm_init();
 

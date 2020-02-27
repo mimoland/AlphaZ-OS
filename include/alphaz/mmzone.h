@@ -1,0 +1,37 @@
+#ifndef _ALPHZ_MMZONE_H_
+#define _ALPHZ_MMZONE_H_
+
+enum zone_type {
+    ZONE_DMA,
+    ZONE_NORMAL,
+    ZONE_HIGHMEM,
+    MAX_NR_ZONES
+};
+
+/* 各个类型的zone的起始与结束地址（物理地址） */
+#define ZONE_DMA_BEGIN      0x00000000
+#define ZONE_DMA_END        0x01000000
+#define ZONE_NORMAL_BEGIN   0x01000000
+#define ZONE_NORMAL_END     0x38000000
+#define ZONE_HIGHMEM_BEGIN  0x38000000
+#define ZONE_HIGHMEM_END    0xffffffff
+
+/* 伙伴系统的最长连续的页数 2^(MAX_ORDER) */
+#define MAX_ORDER   8
+
+struct free_area {
+    struct list_head    free_list;      /* 页块链表 */
+    unsigned long nr_free;              /* 空闲页块的数目，注意，这里将一组连续的物理页看做一个页块
+                                            所以一个页块可能包含一个页，也可能包含两个，或四个等等 */
+};
+
+struct zone {
+    unsigned long flags;
+    spinlock_t lock;
+    struct free_area free_area[MAX_ORDER];
+    struct page *first_page;            /* 起始页 */
+    unsigned long nr_pages;             /* 页数量 */
+    const char *name;
+};
+
+#endif
