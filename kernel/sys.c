@@ -8,6 +8,8 @@
 #include <alphaz/linkage.h>
 #include <alphaz/fcntl.h>
 #include <alphaz/dirent.h>
+#include <alphaz/slab.h>
+
 #include <asm/unistd.h>
 
 asmlinkage unsigned long sys_get_ticks(void)

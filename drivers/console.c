@@ -6,6 +6,7 @@
 #include <alphaz/malloc.h>
 #include <alphaz/console.h>
 #include <alphaz/bugs.h>
+#include <alphaz/slab.h>
 
 #include <asm/console.h>
 #include <asm/div64.h>

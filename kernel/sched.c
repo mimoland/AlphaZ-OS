@@ -5,6 +5,7 @@
 #include <alphaz/bugs.h>
 #include <alphaz/sched.h>
 #include <alphaz/list.h>
+#include <alphaz/slab.h>
 #include <alphaz/malloc.h>
 #include <alphaz/string.h>
 #include <alphaz/kernel.h>

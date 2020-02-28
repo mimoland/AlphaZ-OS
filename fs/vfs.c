@@ -3,6 +3,7 @@
 #include <alphaz/malloc.h>
 #include <alphaz/kernel.h>
 #include <alphaz/fs.h>
+#include <alphaz/slab.h>
 #include <alphaz/bugs.h>
 #include <asm/irq.h>
 

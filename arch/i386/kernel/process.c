@@ -1,5 +1,7 @@
 #include <alphaz/bugs.h>
 #include <alphaz/fork.h>
+#include <alphaz/gfp.h>
+#include <alphaz/slab.h>
 #include <alphaz/kernel.h>
 #include <alphaz/linkage.h>
 #include <alphaz/malloc.h>
@@ -47,7 +49,7 @@ int copy_process(struct task_struct *new, struct pt_regs *regs)
 
 static int cpoy_mm(struct task_struct *new, int flags)
 {
-    new->stack = alloc_page(0, 1);
+    new->stack = (void *)get_zeroed_page(GFP_HIGHUSER);
     if (!new->stack)
         return -1;
     if (!(new->flags & PF_KERNEL))
@@ -74,7 +76,7 @@ pid_t do_fork(struct pt_regs *regs, int flags, unsigned long stack_start,
 {
 	struct task_struct *new;
 
-	new = (struct task_struct *)alloc_page(0, 1);
+	new = (struct task_struct *)get_zeroed_page(GFP_KERNEL);
     if (!new)
         return -1;
     memset(new, 0, sizeof(struct task_struct));

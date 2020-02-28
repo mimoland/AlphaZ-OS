@@ -3,6 +3,7 @@
 #include <alphaz/type.h>
 #include <alphaz/bugs.h>
 #include <alphaz/wait.h>
+#include <alphaz/slab.h>
 #include <alphaz/malloc.h>
 #include <alphaz/spinlock.h>
 

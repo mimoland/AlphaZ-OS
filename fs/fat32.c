@@ -6,6 +6,7 @@
 #include <alphaz/bugs.h>
 #include <alphaz/fat32.h>
 #include <alphaz/fs.h>
+#include <alphaz/slab.h>
 #include <alphaz/stdio.h>
 #include <alphaz/kernel.h>
 #include <alphaz/malloc.h>
