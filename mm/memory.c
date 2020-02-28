@@ -1,9 +1,11 @@
 #include <alphaz/kernel.h>
 #include <alphaz/malloc.h>
 #include <alphaz/mm.h>
+#include <alphaz/mm_types.h>
 #include <alphaz/mmzone.h>
 #include <alphaz/string.h>
 #include <alphaz/type.h>
+#include <alphaz/gfp.h>
 
 #include <asm/bug.h>
 #include <asm/div64.h>
@@ -22,7 +24,7 @@ static unsigned long zone_end_addr[MAX_NR_ZONES] = {
     ZONE_DMA_END, ZONE_NORMAL_END, ZONE_HIGHMEM_END,
 };
 
-const struct page *pages_array = (struct page *)PAGE_ARRAY_ADDR;
+const struct page *mem_map = (struct page *)PAGE_ARRAY_ADDR;
 const struct minfo *minfo_array = (struct minfo *)MEM_INFO_ADDR;
 
 /* 判断当前minfo是否结束 */
@@ -54,13 +56,13 @@ static unsigned long init_pages(unsigned long long mem_size)
     void *addr;
     struct page *p;
 
-    do_div(mem_size, PRE_PAGE_SIZE);
+    do_div(mem_size, PAGE_SIZE);
     num = (unsigned long)mem_size;
 
-    kn = ZONE_NORMAL_END / PRE_PAGE_SIZE;
+    kn = ZONE_NORMAL_END / PAGE_SIZE;
     addr = (void *)0x00;
 
-    p = (struct page *)pages_array;
+    p = (struct page *)mem_map;
     for (i = 0; i < num; i++) {
         p->flags = 0;
         atomic_set(0, &p->_count);
@@ -69,7 +71,7 @@ static unsigned long init_pages(unsigned long long mem_size)
             p->virtual = addr;
         else
             p->virtual = NULL;
-        addr = addr + PRE_PAGE_SIZE;
+        addr = addr + PAGE_SIZE;
         p++;
     }
     return num;
@@ -80,7 +82,7 @@ static inline void setup_pages_flags(unsigned long bi, unsigned long ei,
                                     unsigned long flags)
 {
     int i;
-    struct page *p = (struct page *)pages_array;
+    struct page *p = (struct page *)mem_map;
 
     for (i = bi; i < ei; ++i) {
         (p + i)->flags |= flags;
@@ -102,11 +104,27 @@ static int setup_pages_from_minfo(unsigned long num)
 
         if (type == 1) continue;        /* 类型1为操作系统可用的内存 */
 
-        bi = addr / PRE_PAGE_SIZE;      /* 在pages数组中的起始下标 */
+        bi = addr / PAGE_SIZE;      /* 在pages数组中的起始下标 */
         if (bi >= num) continue;        /* 超过实际内存大小，大于pages数组的长度 */
-        ei = bi + limit / PRE_PAGE_SIZE + (limit % PRE_PAGE_SIZE ? 1 : 0);
-        setup_pages_flags(bi, ei, PAGE_RESERVE);
+        ei = bi + limit / PAGE_SIZE + (limit % PAGE_SIZE ? 1 : 0);
+        setup_pages_flags(bi, ei, PF_RESERVE);
     }
+    return 0;
+}
+
+/* 在页目录中标示当前已经使用的内存 */
+static int setup_pages_reserve(unsigned long num)
+{
+    int i;
+    unsigned long addr, nr;
+    struct page *p;
+
+    p = (struct page *)mem_map;
+    addr =  (PAGE_ARRAY_ADDR - 0xc0000000) + sizeof(struct page) * num;
+    nr = addr / PAGE_SIZE + (addr % PAGE_SIZE ? 1 : 0);
+
+    for (i = 0; i < nr; i++)
+        (p + i)->flags |= PF_RESERVE;
     return 0;
 }
 
@@ -121,6 +139,7 @@ static int init_zones(void)
             list_head_init(&mm_zones[i].free_area[j].free_list);
             mm_zones[i].free_area[j].nr_free = 0;
         }
+        list_head_init(&mm_zones[i].activate);
         mm_zones[i].first_page = NULL;
         mm_zones[i].nr_pages = 0;
     }
@@ -136,11 +155,11 @@ static int setup_zones(unsigned long num)
 
     init_zones();
     for (i = 0; i < MAX_NR_ZONES; i++) {
-        bi = zone_begin_addr[i] / PRE_PAGE_SIZE;
-        ei = bi + (zone_end_addr[i] / PRE_PAGE_SIZE);
+        bi = zone_begin_addr[i] / PAGE_SIZE;
+        ei = bi + (zone_end_addr[i] / PAGE_SIZE);
         if (bi >= num) continue;  // 大于实际的内存大小
         if (ei >= num) ei = num;  // 结束下标大于实际内存
-        mm_zones[i].first_page = (struct page *)pages_array + bi;
+        mm_zones[i].first_page = (struct page *)mem_map + bi;
         mm_zones[i].nr_pages = ei - bi;
     }
 
@@ -175,10 +194,8 @@ void mm_init()
     memsize = calc_total_mem();
     pagenum = init_pages(memsize);
     setup_pages_from_minfo(pagenum);
+    setup_pages_reserve(pagenum);
     setup_zones(pagenum);
 
-    int i;
-    for (i = 0; i < MAX_NR_ZONES; i++) {
-        printk("%s %d %p\n", mm_zones[i].name, mm_zones[i].nr_pages, mm_zones[i].first_page);
-    }
+    buddy_system_init();
 }
