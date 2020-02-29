@@ -13,6 +13,8 @@
 #include <alphaz/sched.h>
 #include <alphaz/stdio.h>
 #include <alphaz/tty.h>
+#include <alphaz/gfp.h>
+#include <alphaz/slab.h>
 #include <alphaz/console.h>
 #include <alphaz/unistd.h>
 
@@ -64,7 +66,11 @@ void kernel_main()
 {
     cpu_init();
     irq_init();
+
     mm_init();
+    kmem_cache_init();
+    kmalloc_cache_init();
+
     keyboard_init();
     console_init();
     task_init();

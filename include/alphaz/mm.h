@@ -7,6 +7,7 @@
 #define __packed __attribute__((packed))
 
 extern struct zone mm_zones[MAX_NR_ZONES];
+extern const struct page *mem_map;
 
 #define KERNEL_BASE         0xc0000000
 
@@ -28,5 +29,7 @@ extern struct zone mm_zones[MAX_NR_ZONES];
 void mm_init();
 
 #define PAGE_SIZE       0x1000
+
+#define vir_to_phy(addr)  ((void *)((unsigned long)addr - KERNEL_BASE))
 
 #endif
