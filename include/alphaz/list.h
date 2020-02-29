@@ -145,6 +145,15 @@ static inline void list_del(struct list_head *entry)
 #define list_for_each(pos, head) \
     for (pos = (head)->next; pos != (head); pos = pos->next)
 
+/**
+ * list_for_each_safe - 遍历链表，可在遍历时删除链表中的元素
+ * @pos: 用于遍历的游标
+ * @n: 用于临时保存游标
+ * @head: 链表的头结点
+ */
+#define list_for_each_safe(pos, n, head) \
+	for (pos = (head)->next, n = pos->next; pos != (head); \
+		pos = n, n = pos->next)
 
 /**
  * list_for_each_prev - 反向遍历链表

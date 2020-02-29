@@ -60,7 +60,7 @@ static unsigned long init_pages(unsigned long long mem_size)
     num = (unsigned long)mem_size;
 
     kn = ZONE_NORMAL_END / PAGE_SIZE;
-    addr = (void *)0x00;
+    addr = (void *)KERNEL_BASE;
 
     p = (struct page *)mem_map;
     for (i = 0; i < num; i++) {
