@@ -5,7 +5,7 @@
 
 #include <alphaz/kernel.h>
 #include <alphaz/list.h>
-#include <alphaz/malloc.h>
+#include <alphaz/slab.h>
 #include <alphaz/spinlock.h>
 #include <alphaz/wait.h>
 
@@ -111,7 +111,7 @@ static void end_request(void)
 {
     list_del(&disk_request_head.use->list);
     disk_request_head.count--;
-    free(disk_request_head.use);
+    kfree(disk_request_head.use);
     disk_request_head.use = NULL;
 }
 
@@ -174,7 +174,7 @@ static void identify_handler(void)
 static request_queue_t * make_request(long cmd, unsigned long sector,
                                         unsigned long nsect, void *buf)
 {
-    request_queue_t *r = (request_queue_t *)malloc(sizeof(request_queue_t));
+    request_queue_t *r = (request_queue_t *)kmalloc(sizeof(request_queue_t), 0);
 
     switch (cmd)
     {

@@ -130,7 +130,7 @@ struct dentry * path_walk(const char *path, int flags)
         if (!(child = find_dcache(parent, name, len)))
             child = make_dentry(parent, name, len);
         if (parent->d_inode->i_op->lookup(parent->d_inode, child) == NULL) {
-            free(child);
+            kfree(child);
             return NULL;
         }
 
