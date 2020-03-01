@@ -128,6 +128,8 @@ _mem_save_end:
 	and 	al, 11111110b
 	mov 	cr0, eax 					; cr0 PE位复位
 
+	; 进行显示设置
+	call	setup_video
 
 	; 加载内核
 	; 寻找KERNEL.BIN
@@ -373,6 +375,7 @@ kill_motor:
 	popad
 	ret
 
+%include "video.asm"
 
 ; 一些消息
 RowOfMessageBegin:	db	3			; 消息开始的行数
@@ -463,15 +466,16 @@ _disp_str_end:
 ; 设置内存分页
 setup_mem_page:
 	pushad
-	; 首先计算需要多少页表和页目录项
-	xor	edx, edx
-	mov	eax, [MemSizeProtMode]
-	mov	ebx, 0x400000			; 4M, 一个页表对应的内存大小
-	div	ebx
-	mov	ecx, eax
-	test	edx, edx 			; 有余数吗
-	jz	_setup_mem_page_next		; 如果没有余数跳转
-	inc	ecx
+	; ; 首先计算需要多少页表和页目录项
+	; xor	edx, edx
+	; mov	eax, [MemSizeProtMode]
+	; mov	ebx, 0x400000			; 4M, 一个页表对应的内存大小
+	; div	ebx
+	; mov	ecx, eax
+	; test	edx, edx 			; 有余数吗
+	; jz	_setup_mem_page_next		; 如果没有余数跳转
+	; inc	ecx
+	mov	ecx, 1024			; 为了测试VBE显示，全部初始化
 _setup_mem_page_next:
 	; 初始化页目录
 	push	ecx
@@ -485,11 +489,11 @@ _setup_mem_page_1:
 	loop	_setup_mem_page_1
 
 	; 将内核映射到高1G地址处
-	pop 	ecx
-	push	ecx
-	cmp	ecx, 256
-	jns	_no_reset_ecx			; 总内存小于256个页目录项
-	mov	ecx, 256
+	; pop 	ecx
+	; push	ecx
+	; cmp	ecx, 32			; fix me
+	; jns	_no_reset_ecx			; 总内存小于256个页目录项
+	mov	ecx, 64
 _no_reset_ecx:
 	mov	edi, BaseOfPageDir + 3072	; 指向高1GB的页目录项
 	xor	eax, eax
