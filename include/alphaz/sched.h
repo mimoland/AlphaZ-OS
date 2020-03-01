@@ -71,6 +71,16 @@ extern pid_t volatile __pid_data pid;
 /* 进程优先级 */
 #define  LOWEST_PRIO            9999            /* 进程的最低优先级 */
 
+struct mm_struct {
+    unsigned long flags;
+
+    unsigned long *pgd;              /* 页表所在位置，物理地址 */
+
+    unsigned long start_code, end_code;
+    unsigned long start_data, end_data;
+    unsigned long start_brk, brk, start_stack;
+};
+
 struct files_struct {
     atomic_t   count;
     struct file *files[TASK_MAX_FILE];

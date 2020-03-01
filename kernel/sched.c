@@ -12,6 +12,7 @@
 #include <alphaz/unistd.h>
 #include <alphaz/linkage.h>
 #include <alphaz/tty.h>
+#include <alphaz/mm.h>
 
 #include <asm/system.h>
 #include <asm/sched.h>
@@ -153,6 +154,10 @@ asmlinkage int sys_exit(int status)
     return status;
 }
 
+extern unsigned long _text, _etext;
+extern unsigned long _data, _edata;
+extern unsigned long _end;
+
 /**
  * 设置idle进程，其中栈在head.S中创建
  */
@@ -181,12 +186,20 @@ static void setup_idle_process(void)
 	ts->signal = 0;
 
     ts->files = (struct files_struct *)kmalloc(sizeof(struct files_struct), 0);
-    assert(ts->files);
+    assert(ts->files != NULL);
     memset(ts->files, 0, sizeof(struct files_struct));
     atomic_set(3, &ts->files->count);
     ts->files->files[STDIN_FILENO] = stdin;
     ts->files->files[STDOUT_FILENO] = stdout;
     ts->files->files[STDERR_FILENO] = stderr;
+
+    ts->mm = (struct mm_struct *)kmalloc(sizeof(struct mm_struct), 0);
+    assert(ts->mm != NULL);
+    ts->mm->start_code = _text;
+    ts->mm->end_code = _etext;
+    ts->mm->start_data = _data;
+    ts->mm->end_data = _edata;
+    ts->mm->pgd = (unsigned long *)PAGE_TABLE_PHY_ADDR;
 
 	idle = ts;
 

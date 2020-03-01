@@ -5,8 +5,6 @@
 #include <alphaz/compiler.h>
 #include <asm/cpu.h>
 
-void setup_thread(struct thread_struct *, u32, u32, unsigned int);
-
 void setup_counter(void);
 
 struct task_struct * __current(void);

@@ -1,6 +1,7 @@
 #include <alphaz/type.h>
 #include <alphaz/sched.h>
 #include <alphaz/compiler.h>
+#include <alphaz/kernel.h>
 #include <asm/io.h>
 #include <asm/irq.h>
 #include <asm/cpu.h>
@@ -33,16 +34,21 @@ inline struct task_struct * __current(void)
     return cur;
 }
 
+static inline void switch_pgd(struct task_struct *p)
+{
+    asm volatile("mov %0, %%cr3"::"r"(p->mm->pgd):"memory");
+}
 
 /**
  * __switch_to - 进程切换的cpu上下文切换
  * @prev: 当前进程的进程控制块指针 in eax
  * @next: 下一个进程的进程控制块指针 in edx
  */
+#include <asm/bug.h>
 struct task_struct * __regparm3
 __switch_to(struct task_struct *prev, struct task_struct *next)
 {
-
     tss.esp0 = next->thread.esp0;
+    switch_pgd(next);
     return prev;
 }

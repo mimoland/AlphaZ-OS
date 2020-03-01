@@ -9,6 +9,9 @@
 extern struct zone mm_zones[MAX_NR_ZONES];
 extern const struct page *mem_map;
 
+/* 页目录物理地址 */
+#define PAGE_TABLE_PHY_ADDR 0x200000
+
 #define KERNEL_BASE         0xc0000000
 
 /* 内存信息所在的地址，跟loader中的一致 */
@@ -30,6 +33,8 @@ void mm_init();
 
 #define PAGE_SIZE       0x1000
 
+/* 只适用于内核空间 */
 #define vir_to_phy(addr)  ((void *)((unsigned long)addr - KERNEL_BASE))
+#define phy_to_vir(addr)  ((void *)((unsigned long)addr + KERNEL_BASE))
 
 #endif

@@ -13,10 +13,6 @@ struct minfo {
     unsigned int type;
 } __attribute__((packed));
 
-struct mm_struct {
-    unsigned long *pgd;
-};
-
 struct page {
     unsigned long flags;
     atomic_t _count;        /* 使用计数 */
