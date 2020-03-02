@@ -72,6 +72,7 @@ static int shell_exec(void)
     shell_buf.buf[shell_buf.tail] = 0;
 
     for (i = 0; i < NR_SHELL_COMMAND; i++) {
+        if (__buildin_command[i].func == NULL) continue;
         if (!strcmp(argv[0], __buildin_command[i].name)) {
             ret = __buildin_command[i].func(argc, argv);
             break;
@@ -205,6 +206,9 @@ void tty_task(void)
     chdir("/user/root");
     print_info();
     print_prefix();
+
+    shell_buf.tail = 0;
+    memset(shell_buf.buf, 0, SHELL_BUF_SIZE);
 
     while (1) {
         loop:
