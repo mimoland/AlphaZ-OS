@@ -4,8 +4,8 @@
 ;
 ; 若能设置成功，那么会在此进入高分辨率模式，并在物理地址0x510处放入VBE的显示起始物理地址
 
-XResolution	equ	1440		; 水平分辨率
-YResolution	equ	900		; 垂直分辨率
+XResolution	equ	1024		; 水平分辨率
+YResolution	equ	768		; 垂直分辨率
 BitsPerPixel	equ	0x20		; 每像素占用位宽
 MemoryMode	equ	6		; 内存模式类型
 DirectColorModeInfo	equ	2	; Direct Color模式属性
@@ -18,6 +18,10 @@ setup_video:
 	; int	10h
 	; ret
 	; 测试设备是否支持VBE, 并获取VbeInfoBlock
+	pushad
+	push	es
+	push	ds
+
 	mov	ax, VbeBufBase
 	mov	es, ax
 	mov	di, VbeBufOffset
@@ -27,7 +31,7 @@ setup_video:
 	jz	_get_video_mode
 	mov	cx, UnsupportVBEMessage
 	call	real_mode_disp_str
-	ret
+	jmp	_ret
 
 _get_video_mode:
 
@@ -49,16 +53,15 @@ _get_video_mode:
 .2:
 
 	; 逐个检查每个模式号
-	mov	esi, 0x100000
-	push	esi
+	mov	ebx, 0x100000
 .3:
-	pop	esi
+	mov	esi, ebx
 	mov	ax, [fs:esi]
-	cmp	ax, -1
+	cmp	ax, -1			; 模式号等于0xffff？已检查完
 	jz 	_check_end
-	add	esi, 2
+	add	ebx, 2
 	mov	cx, ax
-	mov	dx, ax			; 暂存当前模式号
+	mov	dx, ax			; dx暂存当前模式号
 	mov	ax, VbeBufBase
 	mov	es, ax
 	mov	di, VbeBufOffset
@@ -67,7 +70,6 @@ _get_video_mode:
 	cmp	al, 4fh
 	jnz 	.3			; 出错，继续下一个
 
-	push	esi
 	mov	ax, VbeBufBase
 	mov	es, ax
 	mov	si, VbeBufOffset
@@ -91,18 +93,65 @@ _get_video_mode:
 
 _check_end:
 	mov	ax, word [vbemode]
+	cmp	ax, 0			; 没有可选的模式号？直接返回
+	jz	_ret
 	mov	ebx, dword [vbemodeaddr]
 	mov	dx, 0x0000
 	mov	es, dx
 	mov	di, 0x0510
-	mov	dword [es:di], ebx
+	mov	dword [es:di], ebx	; 将显示的相关信息保存到物理地址0x510的位置
+	mov	dword [es:di + 4], XResolution
+	mov	dword [es:di + 8], YResolution
 	mov	bx, 0x4000
 	or	bx, ax
 	mov	ax, 0x4f02
 	int 	10h
+_ret:
+	pop	ds
+	pop	es
+	popad
+	ret
+
+; 输出一个16进制数字, bx中保存要显示的数字
+put_hex_num:
+	pushad
+
+	mov	cx, 12
+	mov	ax, bx
+loop1:
+	mov	bx, ax
+	shr	bx, cl
+	and 	bx, 0xf
+	mov	bl, byte [ds:bx + hex_num]
+	call	put_char
+	sub	cx, 4
+	cmp	cx, 0
+	jns	loop1
+
+	mov	bx, ' '
+	call	put_char
+
+	popad
 	ret
 
 
+; bl保存要显示的字符串
+put_char:
+	pushad
+	push	gs
+	mov	ax, 0xb800
+	mov	gs, ax
+	mov	di, word [char_pos]
+	mov	bh, 0x0f
+	mov	word [gs:di], bx
+	add	di, 2
+	mov	word [char_pos], di
+	pop	gs
+	popad
+	ret
+
+char_pos	dw	0
+hex_num:	db '0123456789abcedf',0
 vbemode:	dw 	0
 vbemodeaddr:	dd 	0
 UnsupportVBEMessage: db 'unsupport vbe',0
