@@ -420,19 +420,8 @@ protect_mode:
 
 		call	init_kernel
 
-
-		; 开启内存分页
-		call	setup_mem_page
-		; ; 将内存的大小写入0x600处供内核内存管理使用
-		; mov	byte [MemInfoAddr], 0xff	; 标示
-		; mov	ebx, [MemSizeProtMode]
-		; mov	dword [MemInfoAddr + 2], ebx
-		; 显示信息
-		mov	ecx, SetupedPageMessage
-		call	disp_str
-
 		; 跳入内核
-		mov	eax, 0xc0100000
+		mov	eax, 0x00100000
 		jmp	eax
 
 		hlt
@@ -460,70 +449,6 @@ _disp_str_lable:
 	inc 	esi
 	jmp	_disp_str_lable
 _disp_str_end:
-	popad
-	ret
-
-; 设置内存分页
-setup_mem_page:
-	pushad
-	; ; 首先计算需要多少页表和页目录项
-	; xor	edx, edx
-	; mov	eax, [MemSizeProtMode]
-	; mov	ebx, 0x400000			; 4M, 一个页表对应的内存大小
-	; div	ebx
-	; mov	ecx, eax
-	; test	edx, edx 			; 有余数吗
-	; jz	_setup_mem_page_next		; 如果没有余数跳转
-	; inc	ecx
-	mov	ecx, 1024			; 为了测试VBE显示，全部初始化
-_setup_mem_page_next:
-	; 初始化页目录
-	push	ecx
-	mov	edi, BaseOfPageDir
-	xor	eax, eax
-	mov	eax, BaseOfPageTable | PG_P | PG_USU | PG_RWW
-_setup_mem_page_1:
-
-	stosd
-	add	eax, 4096
-	loop	_setup_mem_page_1
-
-	; 将内核映射到高1G地址处
-	; pop 	ecx
-	; push	ecx
-	; cmp	ecx, 32			; fix me
-	; jns	_no_reset_ecx			; 总内存小于256个页目录项
-	mov	ecx, 64
-_no_reset_ecx:
-	mov	edi, BaseOfPageDir + 3072	; 指向高1GB的页目录项
-	xor	eax, eax
-	mov	eax, BaseOfPageTable | PG_P | PG_USU | PG_RWW
-_setup_mem_page_3:
-	stosd
-	add	eax, 4096
-	loop	_setup_mem_page_3
-
-	; 初始化页表
-	pop 	eax
-	mov	ebx, 1024
-	mul	ebx
-	mov	ecx, eax
-	mov	edi, BaseOfPageTable
-	xor	eax, eax
-	mov	eax, PG_P | PG_USU | PG_RWW
-_setup_mem_page_2:
-	stosd
-	add	eax, 4096
-	loop	_setup_mem_page_2
-
-	; 初始化相关寄存器
-	mov	eax, BaseOfPageDir
-	mov	cr3, eax
-	mov	eax, cr0
-	or	eax, 0x80000000
-	mov	cr0, eax
-	jmp	_setup_mem_page_end		; 为了刷新处理器中的缓存，这里必须跳转
-_setup_mem_page_end:
 	popad
 	ret
 
@@ -588,9 +513,7 @@ memcpy:
 RowOfMessageBeginProtMode	equ	RowOfMessageBegin + BaseOfLoaderPhyAddr
 
 _ComeInProtModeMessage:	db  'program had jmped in protect mode now....', 0
-_SetupedPageMessage:	db  'setup memary pages is completed...', 0
 ComeInProtModeMessage	equ	_ComeInProtModeMessage + BaseOfLoaderPhyAddr
-SetupedPageMessage	equ	_SetupedPageMessage + BaseOfLoaderPhyAddr
 
 ; 下面开辟一些内存空间供程序使用
 BottmOfStack:   times	1024	db	0				; 1k栈空间

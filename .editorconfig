@@ -10,6 +10,10 @@ trim_trailing_whitespace = true
 indent_style = tab
 tab_width = 8
 
+[*.S]
+indent_style = tab
+tab_width = 8
+
 [*.inc]
 indent_style = tab
 tab_width = 8
