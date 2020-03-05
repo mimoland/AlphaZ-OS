@@ -1,3 +1,4 @@
+#include <alphaz/mm.h>
 #include <asm/string.h>
 #include <asm/console.h>
 #include <asm/irq.h>
@@ -43,15 +44,15 @@ inline void set_cursor(unsigned short cur)
  */
 inline int console_curl(int line)
 {
-    int b0, b1;
+    unsigned long b0, b1;
 
     if (line < 0 || line > 25)
         return -1;
 
-    b0 = vir_to_phys(seg_to_phys(SELECTOR_VIDEO), 0);
-    b1 = vir_to_phys(seg_to_phys(SELECTOR_VIDEO), 160 * line);
+    b0 = DEFAULT_VIDEO_BASE;
+    b1 = DEFAULT_VIDEO_BASE + 160 * line;
     memcpy((void *)b0, (void *)b1, 160 * (25 - line));
-    b0 = vir_to_phys(seg_to_phys(SELECTOR_VIDEO), 160 * 24);
+    b0 = DEFAULT_VIDEO_BASE + 160 * 24;
     memset((void *)b0, 0, 160);
     return 0;
 }
@@ -66,6 +67,7 @@ inline int console_curl(int line)
 inline void write_char(char c, unsigned char type, unsigned short cur)
 {
     unsigned short val = (unsigned short)c | ((unsigned short)type << 8);
+    unsigned long pos = cur * 2 + DEFAULT_VIDEO_BASE;
 
-    asm volatile("movw %%ax, %%gs:(%%edi)"::"a"(val), "D"(cur * 2));
+    asm volatile("movw %%ax, (%%edi)"::"a"(val), "D"(pos));
 }
