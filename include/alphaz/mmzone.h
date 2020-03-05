@@ -15,8 +15,8 @@ enum zone_type {
 #define ZONE_DMA_BEGIN      0x00000000
 #define ZONE_DMA_END        0x01000000
 #define ZONE_NORMAL_BEGIN   0x01000000
-#define ZONE_NORMAL_END     0x38000000
-#define ZONE_HIGHMEM_BEGIN  0x38000000
+#define ZONE_NORMAL_END     0x40000000
+#define ZONE_HIGHMEM_BEGIN  0x40000000
 #define ZONE_HIGHMEM_END    0xffffffff
 
 /* 伙伴系统的最长连续的页数 2^(MAX_ORDER - 1) */

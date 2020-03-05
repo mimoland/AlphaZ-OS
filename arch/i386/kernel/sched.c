@@ -34,9 +34,13 @@ inline struct task_struct * __current(void)
     return cur;
 }
 
-static inline void switch_pgd(struct task_struct *p)
+inline void switch_pgd(unsigned long pgd)
 {
-    asm volatile("mov %0, %%cr3"::"r"(p->mm->pgd):"memory");
+    asm volatile(
+        "mov %0, %%cr3\n\t"
+        "jmp 1f\n\t"
+        "1:\t"
+        ::"r"(pgd):"memory");
 }
 
 /**
@@ -49,6 +53,6 @@ struct task_struct * __regparm3
 __switch_to(struct task_struct *prev, struct task_struct *next)
 {
     tss.esp0 = next->thread.esp0;
-    switch_pgd(next);
+    switch_pgd((unsigned long)next->mm->pgd);
     return prev;
 }

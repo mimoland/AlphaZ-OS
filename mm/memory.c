@@ -6,6 +6,8 @@
 #include <alphaz/string.h>
 #include <alphaz/type.h>
 #include <alphaz/gfp.h>
+#include <alphaz/config.h>
+#include <alphaz/page.h>
 
 #include <asm/bug.h>
 #include <asm/div64.h>
@@ -24,7 +26,7 @@ static unsigned long zone_end_addr[MAX_NR_ZONES] = {
     ZONE_DMA_END, ZONE_NORMAL_END, ZONE_HIGHMEM_END,
 };
 
-const struct page *mem_map = (struct page *)PAGE_ARRAY_ADDR;
+struct page *mem_map;
 const struct minfo *minfo_array = (struct minfo *)MEM_INFO_ADDR;
 
 /* 判断当前minfo是否结束 */
@@ -48,19 +50,22 @@ static unsigned long long calc_total_mem(void)
     return total;
 }
 
-/* 初始化pages数组, 返回pages数组的数量 */
-static unsigned long init_pages(unsigned long long mem_size)
+/* 初始化pages数组, 返回pages数组的尾地址 */
+static unsigned long init_pages(unsigned long long mem_size, unsigned long mem_map_addr)
 {
     int i;
     unsigned long num, kn;
     void *addr;
     struct page *p;
 
+    mem_map_addr = (mem_map_addr / PAGE_SIZE) * PAGE_SIZE + (mem_map_addr % PAGE_SIZE ? PAGE_SIZE : 0);
+    mem_map = (struct page *)mem_map_addr;
+
     do_div(mem_size, PAGE_SIZE);
     num = (unsigned long)mem_size;
 
     kn = ZONE_NORMAL_END / PAGE_SIZE;
-    addr = (void *)KERNEL_BASE;
+    addr = (void *)0x00;
 
     p = (struct page *)mem_map;
     for (i = 0; i < num; i++) {
@@ -68,13 +73,13 @@ static unsigned long init_pages(unsigned long long mem_size)
         atomic_set(0, &p->_count);
         list_head_init(&p->list);
         if (i < kn)
-            p->virtual = addr;
+            p->virtual = addr + __KERNEL_OFFSET;
         else
-            p->virtual = NULL;
+            p->virtual = addr - __USER_OFFSET;
         addr = addr + PAGE_SIZE;
         p++;
     }
-    return num;
+    return (unsigned long)(mem_map + num);
 }
 
 /* 设置页的属性 */
@@ -92,19 +97,20 @@ static inline void setup_pages_flags(unsigned long bi, unsigned long ei,
 /* 根据minfo数组设置pages属性 */
 static int setup_pages_from_minfo(unsigned long num)
 {
-    unsigned long addr, limit, type, bi, ei;
+    unsigned long long addr, limit;
+    unsigned long type, bi, ei;
     struct minfo *info = (struct minfo *)minfo_array;
 
     while (!is_minfo_end(info)) {
-        /* 这里为了方便，只取低地址 */
-        addr = info->base_addr_low;
-        limit = info->length_low;
+        addr = info->base_addr_low | ((unsigned long long)info->base_addr_high << 32);
+        limit = info->length_low | ((unsigned long long)info->length_high << 32);
         type = info->type;
         info++;
 
         if (type == 1) continue;        /* 类型1为操作系统可用的内存 */
 
-        bi = addr / PAGE_SIZE;      /* 在pages数组中的起始下标 */
+        do_div(addr, PAGE_SIZE);
+        bi = addr;                      /* 在pages数组中的起始下标 */
         if (bi >= num) continue;        /* 超过实际内存大小，大于pages数组的长度 */
         ei = bi + limit / PAGE_SIZE + (limit % PAGE_SIZE ? 1 : 0);
         setup_pages_flags(bi, ei, PF_RESERVE);
@@ -112,20 +118,17 @@ static int setup_pages_from_minfo(unsigned long num)
     return 0;
 }
 
-/* 在页目录中标示当前已经使用的内存 */
-static int setup_pages_reserve(unsigned long num)
+/* 在mem_map中标示当前已经使用的内存, 返回已使用的页数 */
+static int setup_pages_reserve(unsigned long tail_addr)
 {
     int i;
-    unsigned long addr, nr;
-    struct page *p;
+    unsigned long nr;
 
-    p = (struct page *)mem_map;
-    addr =  (PAGE_ARRAY_ADDR - 0xc0000000) + sizeof(struct page) * num;
-    nr = addr / PAGE_SIZE + (addr % PAGE_SIZE ? 1 : 0);
+    nr = (tail_addr - __KERNEL_OFFSET) / PAGE_SIZE + 1;
 
     for (i = 0; i < nr; i++)
-        (p + i)->flags |= PF_RESERVE;
-    return 0;
+        mem_map[i].flags |= PF_RESERVE;
+    return nr;
 }
 
 static int init_zones(void)
@@ -189,13 +192,23 @@ void mm_init()
 {
     unsigned long long memsize;
     unsigned long pagenum;
+    unsigned long tail_addr;
 
     show_mem_info();
     memsize = calc_total_mem();
-    pagenum = init_pages(memsize);
-    setup_pages_from_minfo(pagenum);
-    setup_pages_reserve(pagenum);
-    setup_zones(pagenum);
+#ifdef __ARCH_I386
+    if (memsize >= 0xffffffff)
+        memsize = 0xffffffff;
+#endif
 
+    tail_addr = reset_page_table(memsize);
+    tail_addr = init_pages(memsize, tail_addr);
+
+    do_div(memsize, PAGE_SIZE);
+    pagenum = memsize;
+
+    setup_pages_from_minfo(pagenum);
+    setup_pages_reserve(tail_addr);
+    setup_zones(pagenum);
     buddy_system_init();
 }
