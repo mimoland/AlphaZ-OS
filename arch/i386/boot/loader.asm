@@ -405,26 +405,32 @@ align	32
 [bits 32]
 
 protect_mode:
-		mov	ax, selector_data
-		mov	ds, ax
-		mov	es, ax
-		mov	fs, ax
-		mov	ss, ax
-		mov	esp, TopOfStackProtMode
-		mov	ebp, TopOfStackProtMode
-		mov	ax, selector_video
-		mov	gs, ax
+	mov	ax, selector_data
+	mov	ds, ax
+	mov	es, ax
+	mov	fs, ax
+	mov	ss, ax
+	mov	esp, TopOfStackProtMode
+	mov	ebp, TopOfStackProtMode
+	mov	ax, selector_video
+	mov	gs, ax
 
-		mov	ecx, ComeInProtModeMessage
-		call	disp_str
+	mov	ecx, ComeInProtModeMessage
+	call	disp_str
 
-		call	init_kernel
+	call	init_kernel
 
-		; 跳入内核
-		mov	eax, 0x00100000
-		jmp	eax
+	; 开启分页机制，创建临时页表
+	call	setup_mem_page
+	; 显示信息
+	mov	ecx, SetupedPageMessage
+	call	disp_str
 
-		hlt
+	; 跳入内核
+	mov	eax, 0xc0100000
+	jmp	eax
+
+	hlt
 
 ; 保护模式下的字符串显示，不能再使用中断
 ; ecx=要显示的字符串首地址
@@ -481,6 +487,55 @@ _init_kernel_no_action:
 	popad
 	ret
 
+; 设置内存分页
+setup_mem_page:
+	pushad
+	mov	ecx, 8				; 暂时初始化8个页目录，共32M
+_setup_mem_page_next:
+	; 初始化页目录
+	push	ecx
+	mov	edi, BaseOfPageDir
+	xor	eax, eax
+	mov	eax, BaseOfPageTable | PG_P | PG_USU | PG_RWW
+_setup_mem_page_1:
+
+	stosd
+	add	eax, 4096
+	loop	_setup_mem_page_1
+
+	mov	ecx, 8				; 内核映射的8个页目录，供32M
+_no_reset_ecx:
+	mov	edi, BaseOfPageDir + 3072	; 指向高1GB的页目录项
+	xor	eax, eax
+	mov	eax, BaseOfPageTable | PG_P | PG_USU | PG_RWW
+_setup_mem_page_3:
+	stosd
+	add	eax, 4096
+	loop	_setup_mem_page_3
+
+	; 初始化页表
+	pop 	eax
+	mov	ebx, 1024
+	mul	ebx
+	mov	ecx, eax
+	mov	edi, BaseOfPageTable
+	xor	eax, eax
+	mov	eax, PG_P | PG_USU | PG_RWW
+_setup_mem_page_2:
+	stosd
+	add	eax, 4096
+	loop	_setup_mem_page_2
+
+	; 初始化相关寄存器
+	mov	eax, BaseOfPageDir
+	mov	cr3, eax
+	mov	eax, cr0
+	or	eax, 0x80000000
+	mov	cr0, eax
+	jmp	_setup_mem_page_end		; 为了刷新处理器中的缓存，这里必须跳转
+_setup_mem_page_end:
+	popad
+	ret
 
 ; 内存拷贝
 ; 参数：（目的地址，原地址，长度），全为32位
@@ -514,6 +569,8 @@ RowOfMessageBeginProtMode	equ	RowOfMessageBegin + BaseOfLoaderPhyAddr
 
 _ComeInProtModeMessage:	db  'program had jmped in protect mode now....', 0
 ComeInProtModeMessage	equ	_ComeInProtModeMessage + BaseOfLoaderPhyAddr
+_SetupedPageMessage:	db  'setup memary pages is completed...', 0
+SetupedPageMessage	equ	_SetupedPageMessage + BaseOfLoaderPhyAddr
 
 ; 下面开辟一些内存空间供程序使用
 BottmOfStack:   times	1024	db	0				; 1k栈空间

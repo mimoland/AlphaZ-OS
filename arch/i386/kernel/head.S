@@ -21,12 +21,9 @@ initpages:
 	addl    $4, %edi
 	loop    initpages
 
-	# 开启分页
+	# 切换页表
 	movl	$(_PDE - __KERNEL_OFFSET), %eax
 	movl    %eax, %cr3
-	movl    %cr0, %eax
-	orl     $0x80000000, %eax
-	movl    %eax, %cr0
 	jmp     flushtlb
 flushtlb:
 	movl	$stack_top, %esp
