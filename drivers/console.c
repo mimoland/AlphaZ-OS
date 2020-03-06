@@ -7,13 +7,22 @@
 #include <alphaz/console.h>
 #include <alphaz/bugs.h>
 #include <alphaz/slab.h>
+#include <alphaz/fontdata.h>
+#include <alphaz/config.h>
 
 #include <asm/console.h>
 #include <asm/div64.h>
 #include <asm/io.h>
 
+struct console_desc console;
+
+#ifndef __VBE
 #define ROW     25
 #define COL     80
+#else
+#define ROW     (console.height / font_8x16.height)
+#define COL     (console.width / font_8x16.width)
+#endif
 
 struct file *stdout;
 struct file *stderr;

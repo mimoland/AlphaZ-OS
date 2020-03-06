@@ -1,10 +1,12 @@
 #include <alphaz/mm.h>
+#include <alphaz/config.h>
 #include <asm/string.h>
 #include <asm/console.h>
 #include <asm/irq.h>
 #include <asm/io.h>
 #include <asm/bug.h>
 
+#ifndef __VBE
 
 /**
  * 获取屏幕当前的游标
@@ -71,3 +73,5 @@ inline void write_char(char c, unsigned char type, unsigned short cur)
 
     asm volatile("movw %%ax, (%%edi)"::"a"(val), "D"(pos));
 }
+
+#endif
