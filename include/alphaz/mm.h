@@ -23,6 +23,8 @@ extern struct page *mem_map;
 #define VIDEO_BASE_ADDR     0xc0000510
 #define VIDEO_XRESOLUTION   0xc0000514
 #define VIDEO_YRESOLUTION   0xc0000518
+#define VIDEO_MAP_ADDR      0xe0000000
+#define VIDEO_BUF_SIZE      0x00400000
 /* 标示minfo数组结束的魔数 */
 #define MEM_INFO_END_MAGIC  0x3f3f3f3f
 

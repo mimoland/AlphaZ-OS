@@ -250,22 +250,22 @@ void buddy_system_init(void)
     int i;
 
     for (i = 0; i < MAX_NR_ZONES; i++)
-        printk("%d\n", init_each_pages_block(i));
+        init_each_pages_block(i);
 
-    int j;
-    for (i = 1; i < 2; i++)
-        for (j = 0; j < MAX_ORDER; j++)
-        printk("%s %d: %d\n", mm_zones[i].name, j, mm_zones[i].free_area[j].nr_free);
+//     int j;
+//     for (i = 1; i < 2; i++)
+//         for (j = 0; j < MAX_ORDER; j++)
+//         printk("%s %d: %d\n", mm_zones[i].name, j, mm_zones[i].free_area[j].nr_free);
 
-    struct page *p;
-    p = alloc_pages(GFP_KERNEL, 0);
-    __free_pages(p, 0);
-    p = alloc_pages(GFP_KERNEL, 1);
-    __free_pages(p, 1);
-    p = alloc_pages(GFP_KERNEL, 2);
-    __free_pages(p, 2);
-printk("=========================\n");
-    for (i = 1; i < 2; i++)
-        for (j = 0; j < MAX_ORDER; j++)
-        printk("%s %d: %d\n", mm_zones[i].name, j, mm_zones[i].free_area[j].nr_free);
+//     struct page *p;
+//     p = alloc_pages(GFP_KERNEL, 0);
+//     __free_pages(p, 0);
+//     p = alloc_pages(GFP_KERNEL, 1);
+//     __free_pages(p, 1);
+//     p = alloc_pages(GFP_KERNEL, 2);
+//     __free_pages(p, 2);
+// printk("=========================\n");
+//     for (i = 1; i < 2; i++)
+//         for (j = 0; j < MAX_ORDER; j++)
+//         printk("%s %d: %d\n", mm_zones[i].name, j, mm_zones[i].free_area[j].nr_free);
 }

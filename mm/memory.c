@@ -8,6 +8,8 @@
 #include <alphaz/gfp.h>
 #include <alphaz/config.h>
 #include <alphaz/page.h>
+#include <alphaz/bugs.h>
+#include <alphaz/console.h>
 
 #include <asm/bug.h>
 #include <asm/div64.h>
@@ -119,7 +121,7 @@ static int setup_pages_from_minfo(unsigned long num)
 }
 
 /* 在mem_map中标示当前已经使用的内存, 返回已使用的页数 */
-static int setup_pages_reserve(unsigned long tail_addr)
+static int setup_pages_reserved(unsigned long tail_addr)
 {
     int i;
     unsigned long nr;
@@ -169,23 +171,73 @@ static int setup_zones(unsigned long num)
     return 0;
 }
 
-static void show_mem_info(void)
+static int setup_video_reserved(unsigned long num)
 {
-    struct minfo *p = (struct minfo *)minfo_array;
-    while(!is_minfo_end(p))
-    {
-        disp_int(p->base_addr_high);
-        disp_str(" ");
-        disp_int(p->base_addr_low);
-        disp_str(" ");
-        disp_int(p->length_high);
-        disp_str(" ");
-        disp_int(p->length_low);
-        disp_str(" ");
-        disp_int(p->type);
-        disp_str("\n");
-        p++;
+    int i;
+    unsigned int ind, nr;
+
+    ind = __phy(VIDEO_MAP_ADDR) / PAGE_SIZE;
+    nr = VIDEO_BUF_SIZE / PAGE_SIZE + (VIDEO_BUF_SIZE % PAGE_SIZE ? 1 : 0);
+    if (num < ind)
+        return 0;
+
+    for (i = ind; i < num && i < nr; i++)
+        mem_map[i].flags |= PF_RESERVE;
+}
+
+static unsigned long get_pgd(void)
+{
+    unsigned long pgd;
+    asm volatile("movl %%cr3, %0":"=r"(pgd)::"memory");
+    return pgd;
+}
+
+static void flash_tlb(void)
+{
+    asm volatile(
+        "movl %%cr3, %%eax\n\t"
+        "movl %%eax, %%cr3\n\t"
+        "jmp 1f\n\t"
+        "1f: \t"
+        :::"eax", "memory");
+}
+
+static int map_video_buf(void)
+{
+    unsigned long phyaddr, *pgd, *pte;
+    unsigned int ind, nr, i, j;
+
+    phyaddr = *(int *)VIDEO_BASE_ADDR;
+
+    if (phyaddr == 0)           // 为0?说明video.S未能获取到可用的模式号
+        return 0;
+
+    ind = VIDEO_MAP_ADDR / (PAGE_SIZE * NUM_PER_PAGE);      // 计算将要进行映射的页目录的下标
+    pgd = (unsigned long *)__vir(get_pgd());                // 页目录的位置
+
+    nr = VIDEO_BUF_SIZE / PAGE_SIZE;                        // 缓冲区页数
+    for (i = ind; ;i++) {
+        if (pgd[i])
+            pte = (unsigned long *)__vir(pgd[i] & (~0xfffUL));
+        else {
+            pte = (unsigned long *)get_zeroed_page(GFP_KERNEL);
+            pgd[i] = __phy((unsigned long)pte) | PAGE_ATTR;
+        }
+        assert(pte != NULL);
+        for (j = 0; j < NUM_PER_PAGE && nr; j++, phyaddr += PAGE_SIZE, nr--)
+            pte[j] = phyaddr | PAGE_ATTR;
+        if (!nr) break;
     }
+
+    return 0;
+}
+
+static void setup_console(void)
+{
+    console.buf = (unsigned int *)VIDEO_MAP_ADDR;
+    console.width = *(int *)VIDEO_XRESOLUTION;
+    console.height = *(int *)VIDEO_YRESOLUTION;
+    console.pixel_size = 4;
 }
 
 void mm_init()
@@ -194,7 +246,6 @@ void mm_init()
     unsigned long pagenum;
     unsigned long tail_addr;
 
-    show_mem_info();
     memsize = calc_total_mem();
 #ifdef __ARCH_I386
     if (memsize >= 0xffffffff)
@@ -208,7 +259,11 @@ void mm_init()
     pagenum = memsize;
 
     setup_pages_from_minfo(pagenum);
-    setup_pages_reserve(tail_addr);
+    setup_pages_reserved(tail_addr);
+    setup_video_reserved(pagenum);
     setup_zones(pagenum);
     buddy_system_init();
+
+    map_video_buf();
+    setup_console();
 }
