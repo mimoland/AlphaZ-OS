@@ -28,7 +28,7 @@ static void fill_pde(unsigned long pde, unsigned long pte, unsigned long nr)
     unsigned long ki, ui;   // kernel index, user index
 
     phyaddr = __phy(pte);
-    nr = nr / NUM_PER_PAGE;
+    nr = nr / NUM_PER_PAGE + (nr % NUM_PER_PAGE ? 1 : 0);
 
     pd = (unsigned long *)pde;
     ki = KERNEL_BASE / (PAGE_SIZE * NUM_PER_PAGE);      // 内核页目录起始位置
@@ -61,7 +61,7 @@ unsigned long reset_page_table(unsigned long memsize)
     addr = PAGE_PDE;                               // 获取到我们要保存页表的地址
     pde = (addr / PAGE_SIZE + 1) * PAGE_SIZE;      // 页目录起始地址，4k对其
     pte = pde + PAGE_SIZE;                         // 页表起始地址
-    nr = memsize / PAGE_SIZE;                      // 页表项数
+    nr = memsize / PAGE_SIZE + (memsize % PAGE_SIZE ? 1 : 0); /* 页表项数 */
 
     memset((void *)pde, 0, PAGE_SIZE);
 
