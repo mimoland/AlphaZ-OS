@@ -12,6 +12,4 @@ struct task_struct * __current(void);
 struct task_struct * __regparm3
 __switch_to(struct task_struct *, struct task_struct *);
 
-inline void switch_pgd(unsigned long pgd);
-
 #endif

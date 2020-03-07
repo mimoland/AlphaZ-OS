@@ -74,7 +74,7 @@ extern pid_t volatile __pid_data pid;
 struct mm_struct {
     unsigned long flags;
 
-    unsigned long *pgd;              /* 页表所在位置，物理地址 */
+    unsigned long *pgd;              /* 页目录所在的起始逻辑地址 */
 
     unsigned long start_code, end_code;
     unsigned long start_data, end_data;

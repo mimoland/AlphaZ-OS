@@ -40,13 +40,13 @@ static unsigned long *dup_page_table(void)
 {
     unsigned long *pt, *oldpt;
 
-    oldpt = (unsigned long *)phy_to_vir(current->mm->pgd);
+    oldpt = (unsigned long *)current->mm->pgd;
     pt = (unsigned long *)get_zeroed_page(GFP_KERNEL);
     if (!pt)
         return NULL;
     /* 当前只简易的拷贝一下页目录 */
     memcpy(pt, oldpt, PAGE_SIZE);
-    return vir_to_phy(pt);
+    return pt;
 }
 
 static struct mm_struct * dup_mm(void)
@@ -75,6 +75,7 @@ static int copy_mm(struct task_struct *p, int clone_flags)
     struct mm_struct *mm;
 
     /* 一些旧代码还无法废除 */
+    // vir_to_phy
     p->stack = (void *)get_zeroed_page(GFP_HIGHUSER);
     if (!p->stack)
         return -1;

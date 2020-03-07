@@ -11,6 +11,7 @@
 #include <alphaz/bugs.h>
 #include <alphaz/console.h>
 
+#include <asm/memory.h>
 #include <asm/bug.h>
 #include <asm/div64.h>
 #include <asm/io.h>
@@ -183,23 +184,7 @@ static int setup_video_reserved(unsigned long num)
 
     for (i = ind; i < num && i < nr; i++)
         mem_map[i].flags |= PF_RESERVE;
-}
-
-static unsigned long get_pgd(void)
-{
-    unsigned long pgd;
-    asm volatile("movl %%cr3, %0":"=r"(pgd)::"memory");
-    return pgd;
-}
-
-static void flash_tlb(void)
-{
-    asm volatile(
-        "movl %%cr3, %%eax\n\t"
-        "movl %%eax, %%cr3\n\t"
-        "jmp 1f\n\t"
-        "1f: \t"
-        :::"eax", "memory");
+    return 0;
 }
 
 static int map_video_buf(void)
@@ -213,7 +198,7 @@ static int map_video_buf(void)
         return 0;
 
     ind = VIDEO_MAP_ADDR / (PAGE_SIZE * NUM_PER_PAGE);      // 计算将要进行映射的页目录的下标
-    pgd = (unsigned long *)__vir(get_pgd());                // 页目录的位置
+    pgd = (unsigned long *)get_pgd();                       // 页目录的位置
 
     nr = VIDEO_BUF_SIZE / PAGE_SIZE;                        // 缓冲区页数
     for (i = ind; ;i++) {

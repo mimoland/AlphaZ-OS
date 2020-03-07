@@ -18,6 +18,7 @@
 #include <asm/sched.h>
 #include <asm/irq.h>
 #include <asm/cpu.h>
+#include <asm/memory.h>
 
 
 /**
@@ -182,7 +183,6 @@ static void setup_idle_process(void)
 
 	ts->thread.esp0 = NULL_STACK_MAGIC;
 	ts->thread.esp = NULL_STACK_MAGIC;
-	ts->mm = NULL;
 	ts->signal = 0;
 
     ts->files = (struct files_struct *)kmalloc(sizeof(struct files_struct), 0);
@@ -195,11 +195,11 @@ static void setup_idle_process(void)
 
     ts->mm = (struct mm_struct *)kmalloc(sizeof(struct mm_struct), 0);
     assert(ts->mm != NULL);
-    ts->mm->start_code = _text;
-    ts->mm->end_code = _etext;
-    ts->mm->start_data = _data;
-    ts->mm->end_data = _edata;
-    ts->mm->pgd = (unsigned long *)PAGE_TABLE_PHY_ADDR;
+    ts->mm->start_code = (unsigned long)&_text;
+    ts->mm->end_code = (unsigned long)&_etext;
+    ts->mm->start_data = (unsigned long)&_data;
+    ts->mm->end_data = (unsigned long)&_edata;
+    ts->mm->pgd = (unsigned long *)get_pgd();
 
 	idle = ts;
 

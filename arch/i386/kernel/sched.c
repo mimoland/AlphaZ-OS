@@ -6,6 +6,7 @@
 #include <asm/irq.h>
 #include <asm/cpu.h>
 #include <asm/sched.h>
+#include <asm/memory.h>
 
 
 /**
@@ -32,15 +33,6 @@ inline struct task_struct * __current(void)
     struct task_struct *cur;
     asm volatile("andl %%esp, %0":"=r"(cur):"0"(~4095UL));
     return cur;
-}
-
-inline void switch_pgd(unsigned long pgd)
-{
-    asm volatile(
-        "mov %0, %%cr3\n\t"
-        "jmp 1f\n\t"
-        "1:\t"
-        ::"r"(pgd):"memory");
 }
 
 /**

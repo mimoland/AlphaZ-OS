@@ -6,6 +6,7 @@
 #include <alphaz/page.h>
 #include <asm/sched.h>
 #include <asm/bug.h>
+#include <asm/memory.h>
 
 inline unsigned long __phy(unsigned long addr)
 {
@@ -67,6 +68,6 @@ unsigned long reset_page_table(unsigned long memsize)
 
     fill_pte(pte, nr);
     fill_pde(pde, pte, nr);
-    switch_pgd(__phy(pde));
+    switch_pgd(pde);
     return pte + nr * sizeof(unsigned long);       // 返回整个页表结构占用内存的尾地址
 }
