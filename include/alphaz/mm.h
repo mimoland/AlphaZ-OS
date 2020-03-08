@@ -33,9 +33,8 @@ extern struct page *mem_map;
 
 /* 页属性 */
 #define PF_RESERVE          (1UL << 0)   /* 保留页，操作系统不能使用 */
-#define PF_DMA              (1UL << 1)
-#define PF_NORMAL           (1UL << 2)
-#define PF_HIGHMEM          (1UL << 3)
+#define PF_KERNEL           (1UL << 1)
+#define PF_USER             (1UL << 2)
 
 void mm_init();
 

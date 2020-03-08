@@ -75,11 +75,10 @@ static int copy_mm(struct task_struct *p, int clone_flags)
     struct mm_struct *mm;
 
     /* 一些旧代码还无法废除 */
-    // vir_to_phy
-    p->stack = (void *)get_zeroed_page(GFP_HIGHUSER);
+    p->stack = (void *)get_zeroed_page(GFP_USER);
     if (!p->stack)
         return -1;
-    if (!(p->flags & PF_KERNEL))
+    if (!(p->flags & PF_KTHREAD))
 		memcpy(p->stack, current->stack, USER_STACK_SIZE);
 
     if (clone_flags & CLONE_VM) {

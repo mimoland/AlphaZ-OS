@@ -15,9 +15,7 @@ void __free_pages(struct page *page, unsigned int order);
 void free_pages(unsigned long addr, unsigned int order);
 void free_page(unsigned long addr);
 
-#define GFP_DMA         (1UL << 0)
-#define GFP_KERNEL      (1UL << 1)      /* 分配内核区的页 */
-#define GFP_USER        (1UL << 2)
-#define GFP_HIGHUSER    (GFP_USER)
+#define GFP_KERNEL      (1UL << 0)          /* 分配内核区的页 */
+#define GFP_USER        (1UL << 1)
 
 #endif

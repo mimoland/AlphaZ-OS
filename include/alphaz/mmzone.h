@@ -5,19 +5,16 @@
 #include <alphaz/spinlock.h>
 
 enum zone_type {
-    ZONE_DMA,
-    ZONE_NORMAL,
-    ZONE_HIGHMEM,
-    MAX_NR_ZONES
+    ZONE_KERNEL,
+    ZONE_USER,
+    MAX_NR_ZONES,
 };
 
 /* 各个类型的zone的起始与结束地址（物理地址） */
-#define ZONE_DMA_BEGIN      0x00000000
-#define ZONE_DMA_END        0x01000000
-#define ZONE_NORMAL_BEGIN   0x01000000
-#define ZONE_NORMAL_END     0x40000000
-#define ZONE_HIGHMEM_BEGIN  0x40000000
-#define ZONE_HIGHMEM_END    0xffffffff
+#define ZONE_KERNEL_BEGIN   0x00000000
+#define ZONE_KERNEL_END     0x40000000
+#define ZONE_USER_BEGIN     0x40000000
+#define ZONE_USER_END       0xffffffff
 
 /* 伙伴系统的最长连续的页数 2^(MAX_ORDER - 1) */
 #define MAX_ORDER   8

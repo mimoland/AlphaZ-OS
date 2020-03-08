@@ -131,28 +131,22 @@ struct page * alloc_pages(unsigned int gfp_mask, unsigned int order)
     struct page *ret = NULL;
 
     switch (gfp_mask) {
-    case GFP_HIGHUSER:
-        ret = alloc_page_zone(&mm_zones[ZONE_HIGHMEM], order);
+    case GFP_USER:
+        ret = alloc_page_zone(&mm_zones[ZONE_USER], order);
         if (ret) {
-            ret->flags |= PF_HIGHMEM;
+            ret->flags |= PF_USER;
             break;
         }
     case GFP_KERNEL:
-        ret = alloc_page_zone(&mm_zones[ZONE_NORMAL], order);
+        ret = alloc_page_zone(&mm_zones[ZONE_KERNEL], order);
         if (ret) {
-            ret->flags |= PF_NORMAL;
-            break;
-        }
-    case GFP_DMA:
-        ret = alloc_page_zone(&mm_zones[ZONE_DMA], order);
-        if (ret) {
-            ret->flags |= PF_DMA;
+            ret->flags |= PF_KERNEL;
             break;
         }
     default:
-        ret = alloc_page_zone(&mm_zones[ZONE_NORMAL], order);
+        ret = alloc_page_zone(&mm_zones[ZONE_KERNEL], order);
         if (ret)
-            ret->flags |= PF_NORMAL;
+            ret->flags |= PF_KERNEL;
     }
     return ret;
 }
@@ -220,15 +214,12 @@ static void free_pages_zone(struct zone *zone, struct page *page, unsigned int o
 
 void __free_pages(struct page *page, unsigned int order)
 {
-    switch (page->flags & (PF_DMA | PF_NORMAL | PF_HIGHMEM)) {
-    case PF_DMA:
-        free_pages_zone(&mm_zones[ZONE_DMA], page, order);
+    switch (page->flags & (PF_KERNEL | PF_USER)) {
+    case PF_KERNEL:
+        free_pages_zone(&mm_zones[ZONE_KERNEL], page, order);
         break;
-    case PF_NORMAL:
-        free_pages_zone(&mm_zones[ZONE_NORMAL], page, order);
-        break;
-    case PF_HIGHMEM:
-        free_pages_zone(&mm_zones[ZONE_HIGHMEM], page, order);
+    case PF_USER:
+        free_pages_zone(&mm_zones[ZONE_USER], page, order);
         break;
     default:
         break;

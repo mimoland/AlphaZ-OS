@@ -17,16 +17,15 @@
 #include <asm/io.h>
 
 struct zone mm_zones[MAX_NR_ZONES] = {
-    [ZONE_DMA] = { .name = "DMA", },
-    [ZONE_NORMAL] = { .name = "NORMAL", },
-    [ZONE_HIGHMEM] = { .name = "HIGHMEM", },
+    [ZONE_KERNEL] = { .name = "KERNEL", },
+    [ZONE_USER] = { .name = "USER", },
 };
 
 static unsigned long zone_begin_addr[MAX_NR_ZONES] = {
-    ZONE_DMA_BEGIN, ZONE_NORMAL_BEGIN, ZONE_HIGHMEM_BEGIN,
+    ZONE_KERNEL_BEGIN, ZONE_USER_BEGIN,
 };
 static unsigned long zone_end_addr[MAX_NR_ZONES] = {
-    ZONE_DMA_END, ZONE_NORMAL_END, ZONE_HIGHMEM_END,
+    ZONE_KERNEL_END, ZONE_USER_END,
 };
 
 struct page *mem_map;
@@ -67,7 +66,7 @@ static unsigned long init_pages(unsigned long long mem_size, unsigned long mem_m
     do_div(mem_size, PAGE_SIZE);
     num = (unsigned long)mem_size;
 
-    kn = ZONE_NORMAL_END / PAGE_SIZE;
+    kn = ZONE_KERNEL_END / PAGE_SIZE;
     addr = (void *)0x00;
 
     p = (struct page *)mem_map;
@@ -79,6 +78,14 @@ static unsigned long init_pages(unsigned long long mem_size, unsigned long mem_m
             p->virtual = addr + __KERNEL_OFFSET;
         else
             p->virtual = addr - __USER_OFFSET;
+
+        /*
+         * 为什么当虚拟地址为0时要设置页属性为保留页？这来着一个很有意思的bug，当从伙伴系统
+         * 分配的页的虚拟地址为0时会被误认为返回的为NULL，这意味着页分配失败，所以这里将这页
+         * 保留处理
+         */
+        if (!p->virtual)
+            p->flags |= PF_RESERVE;
         addr = addr + PAGE_SIZE;
         p++;
     }
@@ -162,7 +169,7 @@ static int setup_zones(unsigned long num)
     init_zones();
     for (i = 0; i < MAX_NR_ZONES; i++) {
         bi = zone_begin_addr[i] / PAGE_SIZE;
-        ei = bi + (zone_end_addr[i] / PAGE_SIZE);
+        ei = zone_end_addr[i] / PAGE_SIZE;
         if (bi >= num) continue;  // 大于实际的内存大小
         if (ei >= num) ei = num;  // 结束下标大于实际内存
         mm_zones[i].first_page = (struct page *)mem_map + bi;
