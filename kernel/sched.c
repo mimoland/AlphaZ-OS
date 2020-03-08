@@ -168,7 +168,7 @@ static void setup_idle_process(void)
 	struct task_struct *ts = current;
 
 	ts->state = TASK_RUNNING;
-	ts->flags |= PF_KERNEL;
+	ts->flags |= PF_KTHREAD;
 
 	ts->stack = NULL;           /* 无用户栈 */
 	ts->pid = 0;

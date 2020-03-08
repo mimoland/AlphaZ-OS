@@ -12,8 +12,8 @@
 #define	TASK_STOPPED		    (1 << 4)        /* 停止状态 */
 
 /* 进程标示 */
-#define PF_KERNEL               (1 << 0)    /* 内核级进程 */
-#define NEED_SCHEDULE           (1 << 1)    /* 进程需要调度标示 */
+#define PF_KTHREAD              (1 << 0)        /* 内核级进程 */
+#define NEED_SCHEDULE           (1 << 1)        /* 进程需要调度标示 */
 
 #ifndef __ASSEMBLY__
 

@@ -28,7 +28,7 @@ int setup_thread(struct task_struct *p, struct pt_regs *regs, int flags)
     newregs = get_pt_regs(p);
     memcpy(newregs, regs, sizeof(*newregs));
     newregs->eax = 0;
-    if (p->flags & PF_KERNEL) {
+    if (p->flags & PF_KTHREAD) {
         newregs->esp = (unsigned long)newregs;
         p->thread.eip = (unsigned long)kernel_thread_ret;
     } else {
