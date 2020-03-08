@@ -9,6 +9,21 @@
 #include <alphaz/gfp.h>
 #include <alphaz/string.h>
 
+static int block_append(struct zone *zone, struct page *page, unsigned int count)
+{
+    int i, ret = 0;
+
+    for (i = (MAX_ORDER - 1); i >= 0; --i) {
+        if (count & (1 << i)) {
+            list_add_tail(&page->list, &zone->free_area[i].free_list);
+            zone->free_area[i].nr_free++;
+            ret++;
+            page += (1 << i);
+        }
+    }
+    return ret;
+}
+
 static void block_insert(struct free_area *free, struct page *page)
 {
     struct page *p;
@@ -70,7 +85,7 @@ static int init_each_pages_block(unsigned int zone)
         if ((ep->flags & PF_RESERVE) || (ep + 1) == tail ||
             count >= (1 << (MAX_ORDER - 1))) {
             if (count)
-                ret += block_insert_big_first(&mm_zones[zone], bp, count);
+                ret += block_append(&mm_zones[zone], bp, count);
             bp = ++ep;
             count = 0;
         } else {
