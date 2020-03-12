@@ -342,7 +342,7 @@ static struct super_block *fat32_get_sb(struct file_system_type *fs, void *info)
 	d_inode = (struct inode *)kmalloc(sizeof(struct inode), 0);
 
 	dev_read(0, 1, dpt);
-	dpte = &dpt->DPTE[0];
+	dpte = &dpt->DPTE[1];
 
 	dev_read(dpte->start_LBA, 1, boot_sector);
 	dev_read(dpte->start_LBA + boot_sector->BPB_FSInfo, 1, fs_info);

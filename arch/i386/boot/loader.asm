@@ -1,6 +1,7 @@
 
 org	0000h
 
+StartLBA		equ	2048
 ; 对loader加载位置的更改务必要更改boot中的加载位置和此处的加载位置
 BaseOfLoader		equ	01000h			; loader的段地址
 OffsetOfLoader		equ	0000h			; loader的偏移地址
@@ -10,16 +11,13 @@ BaseOfScreen		equ	0b800h			; 显存的段地址
 RowOfScreen		equ	25			; 屏幕行数
 ColOfScreen		equ	80			; 屏幕列数
 
-BaseOfKernel		equ	08000h			; kernel的段地址
-OffsetOfKernel		equ	0h			; kernel的偏移地址
-
 BaseOfKernelPhyAddr	equ	200000h		 	; kernel临时加载的位置，还需要根据ELF信息进行调整
 
 ; 这里假设kernel的大小不会超过1MB
 BaseOfPageDir		equ	200000h			; 页目录基址
 BaseOfPageTable		equ	201000h			; 页表基址
 
-BaseOfKernelTmp		equ	07e0h			; kernel加载缓存的段地址
+BaseOfKernelTmp		equ	0800h			; kernel加载缓存的段地址
 OffsetOfKernelTmp	equ 	0000h			; kernel加载缓存的偏移地址
 BaseOfKernelTmpPhyAddr	equ 	BaseOfKernelTmp*10h     ; kernel加载缓存的物理基址
 
@@ -231,8 +229,6 @@ _kernel_move:
 	jmp	_load_kernel_goon
 
 _kernel_loaded:
-	; kernel加载完后，先关闭软驱马达
-	call	kill_motor
 	mov	ax, 0x0200
 	mov	cx, KernelLoadedMessage
 	call	real_mode_disp_str
@@ -288,36 +284,43 @@ _is_end:
 	popad
 	ret
 
-; 使用BIOS int 13h 读取软盘扇区函数
+; 使用BIOS int 13h 读取磁盘扇区函数
 ; 参数： 从第 ax 个 Sector 开始, 将 cl 个 Sector 读入 es:bx 中
 real_mode_read_sector:
 	pushad
-	mov	bp, sp
-	sub	esp, 2			; 局部变量空间，保存要读的扇区数
-
-	mov	byte [bp-2], cl
-	push	bx
-	mov	bl, [BPB_SecPerTrk]	; 每磁道扇区数
-	div	bl
-	inc	ah
-	mov	cl, ah			; 起始扇区号
-	mov	dh, al
-	shr 	al, 1
-	mov 	ch, al			; 柱面号
-	and	dh, 1			; 磁头号
-
-	pop	bx
-	mov	dl, [BS_DrvNum]		; 驱动器号，0
-
-_read_sector_read:
-	mov	ah, 2			; 读功能
-	mov	al, byte [bp-2]		; 要读的扇区数
-	int	13h
-	jc	_read_sector_read	; 如果读取出错CF=1，这时不停地读，直到正确为止
-
-	add	esp, 2			; 平衡栈
+	xor	ch, ch
+	mov	[SectorAddr + SectorAddrSect], cx
+	xor	ecx, ecx
+	mov	cx, ax
+	add	ecx, StartLBA
+	mov	dword [SectorAddr + SectorAddrLBA], ecx
+	mov	ax, es
+	mov	[SectorAddr + SectorAddrBase], ax
+	mov	[SectorAddr + SectorAddrOffset], bx
+_reread:
+	mov	ah, 0x42	; 读硬盘
+	mov	dl, 0x80	; 驱动器号
+	mov	si, SectorAddr
+	int	0x13
+	jc	_reread
 	popad
 	ret
+
+
+SectorAddrSize		equ	0
+SectorAddrReserve	equ	1
+SectorAddrSect		equ	2
+SectorAddrOffset	equ	4
+SectorAddrBase		equ	6
+SectorAddrLBA		equ	8
+SectorAddr:
+	db 	0x10		; 结构体大小
+	db 	0		; 保留
+	dw 	0		; 扇区数
+	dw 	0		; 保存读取内容的内存偏移地址
+	dw 	0		; 保存读取内容的内存段地址
+	dd 	0		; LBA扇区号
+	dd 	0		; 用于大容量存储设备的读取
 
 
 ; 找到序号为 ax 的 Sector 在 FAT 中的条目, 结果放在 ax 中
@@ -330,7 +333,7 @@ real_mode_get_FAT_entry:
 	push	dx
 
 	push	ax
-	mov	ax, BaseOfKernel
+	mov	ax, BaseOfKernelTmp
 	sub 	ax, 0x0100
 	mov	es, ax
 	pop 	ax				; ax恢复原值
@@ -366,14 +369,6 @@ label_even_2:
 	pop	es
 	ret
 
-; 关闭软驱马达
-kill_motor:
-	pushad
-	mov	dx, 0x03f2
-	mov	al, 0
-	out	dx, al
-	popad
-	ret
 
 %include "video.asm"
 

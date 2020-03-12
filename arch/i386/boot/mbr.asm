@@ -19,7 +19,7 @@ StartLBA	equ	8
 	mov	cx, SuccessMsg
 	call	disp_str
 
-	jmp	0x0000:0x8000
+	jmp	0x0000:0x7e00
 error:
 	mov	ax, 0x0000
 	mov	cx, ErrorMsg
@@ -30,7 +30,7 @@ dbraddr:
 	db 	0x10		; dbraddr结构体大小
 	db 	0		; 保留
 	dw 	1		; 读取一个扇区
-	dw 	0x8000		; 保存读取内容的内存偏移地址
+	dw 	0x7e00		; 保存读取内容的内存偏移地址
 	dw 	0x0000		; 保存读取内容的内存段地址
 	dd 	2048		; LBA扇区号
 	dd 	0		; 用于大容量存储设备的读取

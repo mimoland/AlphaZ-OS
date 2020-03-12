@@ -2,8 +2,9 @@
 
 
 
-	org 7c00h		; 指示程序加载到7c00h处
+	org 7e00h		; 指示程序加载到8000h处
 
+StartLBA	equ	2048	; boot分区的起始扇区号
 BaseOfStack	equ	7c00h	; 栈的段地址
 BaseOFLoader	equ	01000h	; loader的段地址
 OffsetOfLoader  equ	0000h	; loader的偏移地址
@@ -39,11 +40,6 @@ start:
 	call	disp_str
 
 	; 加载loader进内存，首先fat12文件系统上寻找loader
-
-	; 先将软驱复位
-	xor	ah, ah
-	xor	dl, dl
-	int	13h
 
 	; 寻找loader
 	mov	word [SectorNo], SectorNoOfRootDirectory	; 要读的扇区号
@@ -207,36 +203,42 @@ disp_str:
 	popad
 	ret
 
-; 使用BIOS int 13h 读取软盘扇区函数
+; 使用BIOS int 13h 读取磁盘扇区函数
 ; 参数： 从第 ax 个 Sector 开始, 将 cl 个 Sector 读入 es:bx 中
 read_sector:
 	pushad
-	mov	bp, sp
-	sub	esp, 2			; 局部变量空间，保存要读的扇区数
-
-	mov	byte [bp-2], cl
-	push	bx
-	mov	bl, [BPB_SecPerTrk]	; 每磁道扇区数
-	div	bl
-	inc	ah
-	mov	cl, ah			; 起始扇区号
-	mov	dh, al
-	shr 	al, 1
-	mov 	ch, al			; 柱面号
-	and	dh, 1			; 磁头号
-
-	pop	bx
-	mov	dl, [BS_DrvNum]		; 驱动器号，0
-
-_read_sector_read:
-	mov	ah, 2			; 读功能
-	mov	al, byte [bp-2]		; 要读的扇区数
-	int	13h
-	jc	_read_sector_read	; 如果读取出错CF=1，这时不停地读，直到正确为止
-
-	add	esp, 2			; 平衡栈
+	xor	ch, ch
+	mov	[SectorAddr + SectorAddrSect], cx
+	xor	ecx, ecx
+	mov	cx, ax
+	add	ecx, StartLBA
+	mov	dword [SectorAddr + SectorAddrLBA], ecx
+	mov	ax, es
+	mov	[SectorAddr + SectorAddrBase], ax
+	mov	[SectorAddr + SectorAddrOffset], bx
+_reread:
+	mov	ah, 0x42	; 读硬盘
+	mov	dl, 0x80	; 驱动器号
+	mov	si, SectorAddr
+	int	0x13
+	jc	_reread
 	popad
 	ret
+
+SectorAddrSize		equ	0
+SectorAddrReserve	equ	1
+SectorAddrSect		equ	2
+SectorAddrOffset	equ	4
+SectorAddrBase		equ	6
+SectorAddrLBA		equ	8
+SectorAddr:
+	db 	0x10		; 结构体大小
+	db 	0		; 保留
+	dw 	0		; 扇区数
+	dw 	0		; 保存读取内容的内存偏移地址
+	dw 	0		; 保存读取内容的内存段地址
+	dd 	0		; LBA扇区号
+	dd 	0		; 用于大容量存储设备的读取
 
 BootMessageLen:		equ	9
 BootMessage: 		db 'Booting..'
