@@ -10,7 +10,7 @@ cpu: cpuid_limit_winnt=0
 
 # default memory size is 32MB
 # memory: guest=512, host=512
-megs: 32
+megs: 2048
 
 romimage: file=$BXSHARE/BIOS-bochs-latest, options=fastboot
 vgaromimage: file=$BXSHARE/VGABIOS-lgpl-latest
@@ -21,14 +21,12 @@ mouse: enabled=0
 clock: sync=realtime, time0=local
 private_colormap: enabled=0
 
-floppya: 1_44=a.img, status=inserted
-
 ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
 ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15
 ata2: enabled=0, ioaddr1=0x1e8, ioaddr2=0x3e0, irq=11
 ata3: enabled=0, ioaddr1=0x168, ioaddr2=0x360, irq=9
 ata0-master: type=disk, path="alphaz.vhd", mode=vpc
-boot: floppy
+boot: disk
 
 pci: enabled=1, chipset=i440fx
 

@@ -74,11 +74,16 @@ all: config $(target)/kernel.bin
 PHONY += all
 
 buildimg:
-	dd if=$(target)/boot.bin of=a.img bs=512 count=1 conv=notrunc
-	sudo mount -o loop a.img /mnt/floppy/
-	sudo cp -fv $(target)/loader.bin /mnt/floppy/
-	sudo cp -fv $(target)/kernel.bin /mnt/floppy/
-	sudo umount /mnt/floppy
+	dd if=$(target)/mbr.bin of=alphaz.vhd bs=512 count=1 conv=notrunc
+	dd if=$(target)/boot.bin of=alphaz.vhd bs=512 count=1 seek=2048 conv=notrunc
+	sudo modprobe nbd max_part=8
+	sudo qemu-nbd -f vpc -c /dev/nbd0 alphaz.vhd
+	sudo mount /dev/nbd0p1 /mnt/
+	sudo rm /mnt/*
+	sudo cp -fv $(target)/loader.bin /mnt/
+	sudo cp -fv $(target)/kernel.bin /mnt/
+	sudo umount /mnt
+	sudo qemu-nbd -d /dev/nbd0
 PHONY += buildimg
 
 image: all buildimg
@@ -104,11 +109,11 @@ clean:
 PHONY += clean
 
 qemu:
-	qemu -fda a.img -hda alphaz.vhd -boot a
+	qemu -hda alphaz.vhd -m 2G,slots=3,maxmem=4G
 PHONY += qemu
 
 debug:
-	@qemu -s -S -fda a.img -hda alphaz.vhd -boot a &
+	@qemu -s -S -hda alphaz.vhd -m 2G,slots=3,maxmem=4G &
 	@gdb -x scripts/gdbinit
 	@kill $$(ps | grep qemu | awk '{print $$1 }')
 
