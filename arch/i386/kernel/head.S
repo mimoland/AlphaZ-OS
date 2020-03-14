@@ -24,7 +24,11 @@ initpages:
 	# 切换页表
 	movl	$(_PDE - __KERNEL_OFFSET), %eax
 	movl    %eax, %cr3
-	jmp     flushtlb
+	movl	%cr0, %eax
+	orl 	$0x80000000, %eax
+	movl	%eax, %cr0
+	movl 	$(flushtlb), %eax
+	jmp	*%eax
 flushtlb:
 	movl	$stack_top, %esp
     	movl	$stack_top, %ebp

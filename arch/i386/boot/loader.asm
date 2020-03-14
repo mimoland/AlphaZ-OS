@@ -415,14 +415,8 @@ protect_mode:
 
 	call	init_kernel
 
-	; 开启分页机制，创建临时页表
-	call	setup_mem_page
-	; 显示信息
-	mov	ecx, SetupedPageMessage
-	call	disp_str
-
 	; 跳入内核
-	mov	eax, 0xc0100000
+	mov	eax, 0x00100000
 	jmp	eax
 
 	hlt
@@ -562,10 +556,8 @@ memcpy:
 ; RowOfMessageBegin 还是使用前面的
 RowOfMessageBeginProtMode	equ	RowOfMessageBegin + BaseOfLoaderPhyAddr
 
-_ComeInProtModeMessage:	db  'program had jmped in protect mode now....', 0
+_ComeInProtModeMessage:	db  'program had jumped in protect mode now....', 0
 ComeInProtModeMessage	equ	_ComeInProtModeMessage + BaseOfLoaderPhyAddr
-_SetupedPageMessage:	db  'setup memary pages is completed...', 0
-SetupedPageMessage	equ	_SetupedPageMessage + BaseOfLoaderPhyAddr
 
 ; 下面开辟一些内存空间供程序使用
 BottmOfStack:   times	1024	db	0				; 1k栈空间
