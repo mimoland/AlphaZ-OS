@@ -229,7 +229,7 @@ static ssize_t read(struct file *filp, char *buf, size_t size, loff_t pos)
     index = pos;
     clus = filp->f_dentry->d_inode->i_ino;      /* 第一个簇 */
     count = 0;
-    buffer = (char *)kmalloc(sizeof(private->bytes_per_clus), 0);
+    buffer = (char *)kmalloc(private->bytes_per_clus, 0);
     assert(buffer != NULL);
 
     for (i = 0; i < index; i++)
