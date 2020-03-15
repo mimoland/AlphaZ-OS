@@ -78,6 +78,7 @@ buildimg:
 	dd if=$(target)/boot.bin of=alphaz.vhd bs=512 count=1 seek=2048 conv=notrunc
 	sudo modprobe nbd max_part=8
 	sudo qemu-nbd -f vpc -c /dev/nbd0 alphaz.vhd
+	sleep 0.5
 	sudo mount /dev/nbd0p1 /mnt/
 	sudo rm /mnt/*
 	sudo cp -fv $(target)/loader.bin /mnt/
