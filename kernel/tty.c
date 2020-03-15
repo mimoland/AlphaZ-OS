@@ -9,6 +9,7 @@
 #include <alphaz/bugs.h>
 #include <alphaz/dirent.h>
 #include <alphaz/ctype.h>
+#include <alphaz/fcntl.h>
 
 #include <asm/console.h>
 #include <asm/bug.h>
@@ -85,8 +86,6 @@ static int shell_exec(void)
     }
 
     shell_buf.tail = 0;     /* 清空缓冲区 */
-    if (ret != 0)
-        printf("something was wrong, exit code %d\n", ret);
     return ret;
 }
 
@@ -143,49 +142,90 @@ static int sh_ls(int argc, char *argv[])
     static char buf[256];
     struct DIR *dir;
     struct dirent *d;
-    int len;
+    int len, size, i;
+    short year, mon, day, hour, min;
 
     if (argc == 1) {
         len = getcwd(buf, 255);
-        if (len == -1) return -1;
+        if (len == -1)
+            return -1;
         dir = opendir(buf);
     } else
         dir = opendir(argv[1]);
 
-    if (!dir) return -1;
-    while ((d = readdir(dir)))
-        printf(" %s\n", d->d_name);
+    if (!dir)
+        return -1;
+    while ((d = readdir(dir))) {
+        year = (d->wdata >> 9) + 1980;
+        mon = (d->wdata >> 5) & 0xf;
+        day = d->wdata & 0x1f;
+        hour = (d->wtime >> 11);
+        min = (d->wtime >> 5) & 0x3f;
+        size = (unsigned)d->size;
+        if (d->type == FS_ATTR_DIR) {
+            i = 0;
+            while (d->name[i])
+                i++;
+            d->name[i++] = '/';
+            d->name[i] = 0;
+        }
+
+        printf(" %-11s %4d  %d/%02d/%02d %02d:%02d\n", d->name, size, year, mon,
+               day, hour, min);
+    }
     closedir(dir);
     return 0;
 }
 
+static int sh_cat(int argc, char *argv[])
+{
+    static char buf[256];
+    int fd, len;
+
+    if (argc != 2) {
+        printf(" error: no input file\n");
+        return -1;
+    }
+
+    fd = open(argv[1], O_RDONLY);
+    if (fd == -1) {
+        printf(" error: no such file\n");
+        return -1;
+    }
+
+    while((len = read(fd, buf, 256)) != EOF)
+        write(STDOUT_FILENO, buf, len);
+    printf("\n");
+    close(fd);
+    return 0;
+}
+
 struct command __buildin_command[32] = {
-    [0] = { .name = "help",     .func = sh_help,   .description = "show shell's all command", },
+    [0] = { .name = "help",     .func = sh_help,   .description = "show all commands", },
     [1] = { .name = "reboot",   .func = sh_reboot, .description = "reboot the system", },
-    [2] = { .name = "pwd",      .func = sh_pwd,    .description = "show current work directory", },
+    [2] = { .name = "pwd",      .func = sh_pwd,    .description = "print current work directory", },
     [3] = { .name = "cd",       .func = sh_cd,     .description = "change the work directory, only support absolute directory", },
     [4] = { .name = "ls",       .func = sh_ls,     .description = "show all files in a directory"},
-    [5 ... NR_SHELL_COMMAND - 1] = { .func = NULL, },
+    [5] = { .name = "cat",      .func = sh_cat,    .description = "read file and print on the standard output"},
+    [6 ... NR_SHELL_COMMAND - 1] = { .func = NULL, },
 };
 
 static void print_info(void)
 {
-    static char *alphaz_info =
-"                                                                                "
-"================================================================================"
-"                                                                                "
-"                    Welcome to use AlphaZ OS (develpment)                       "
-"                          Copyright(C)  lml 2020                                "
-"                                                                                "
-"================================================================================"
-"                                                                                "
-"enter 'help' for more infomation                                                \n";
 
-    char *p;
+    char buf[128];
+    int fd, len;
 
-    for (p = alphaz_info; *p != 0; ++p) {
-        printf("%c", *p);
+    fd = open("/etc/welcome", O_RDONLY);
+
+    if (fd == -1)
+        return;
+
+    while ((len = read(fd, buf, 127)) != EOF) {
+        buf[len] = 0;
+        printf("%s", buf);
     }
+    close(fd);
 }
 
 static void print_prefix(void)

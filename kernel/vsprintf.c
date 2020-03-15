@@ -2,20 +2,23 @@
 #include <alphaz/type.h>
 #include <alphaz/stdio.h>
 #include <alphaz/string.h>
+#include <alphaz/ctype.h>
 
 #include <asm/div64.h>
 
 /* from Linux */
+#define ZEROPAD 1       /* 使用0填充 */
 #define SIGN	2		/* unsigned/signed long */
+#define LEFT    16
 #define SPECIAL	32		/* 0x */
 #define LARGE	64		/* use 'ABCDEF' instead of 'abcdef' */
 
 
 
-static char * number(char *str, char *end, unsigned long long num, int base,
+static char * number(char *str, char *end, unsigned long long num, int base, int size,
                         int type)
 {
-	char sign, tmp[66];
+	char sign, tmp[66], pad;
     const char *digits;
 	int i = 0;
 	static const char small_digits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -23,6 +26,11 @@ static char * number(char *str, char *end, unsigned long long num, int base,
 
     digits = (type & LARGE) ? large_digits : small_digits;
 	if (base < 2 || base > 36) return str;
+
+    pad = (type & ZEROPAD) ? '0' : ' ';
+
+    if (type & LEFT)
+        pad = ' ';
 
     sign = 0;
     if(type & SIGN) {
@@ -37,25 +45,33 @@ static char * number(char *str, char *end, unsigned long long num, int base,
 	else while (num != 0)
 		tmp[i++] = digits[do_div(num, base)];
 
-    if (sign) {
-        if (str < end)
-            *str++ = sign;
-    }
+    if (sign)
+        tmp[i++] = sign;
+
     if (type & SPECIAL) {
-        if (base == 8) {
-            if (str < end)
-                *str++ = '0';
-        }
+        if (base == 8)
+            tmp[i++] = '0';
         if (base == 16) {
-            if (str < end)
-                *str++ = '0';
-            if (str < end)
-                *str++ = digits[33];
+            tmp[i++] = digits[33];
+            tmp[i++] = '0';
         }
     }
 
-	while (str < end && i > 0)
+    if (size < i)
+        size = i;
+
+    while (size > i && !(type & LEFT) && str < end) {
+        *str++ = pad;
+        size--;
+    }
+
+	while (str < end && i > 0 && size > 0) {
 		*str++ = tmp[--i];
+        size--;
+    }
+
+    while (size-- > 0 && str < end)
+        *str++ = pad;
 
 	*str = 0;
 	return str;
@@ -84,7 +100,7 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 int vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
 {
     char c, *str, *end, *s;
-    int flags, base;
+    int flags, base, field_width, len, qualifier;
     unsigned long long tmp;
     end = buf + size;
 
@@ -94,8 +110,36 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
             continue;
         }
 
-        ++fmt;              /* 跳过百分号 */
+
         flags = 0;
+
+    repeat:
+        ++fmt;              /* 第一次到这里为跳过% */
+        switch (*fmt) {
+        case '-':
+            flags |= LEFT;
+            goto repeat;
+        case '0':
+            flags |= ZEROPAD;
+            goto repeat;
+        }
+
+        field_width = 0;
+        while (isdigit(*fmt)) {
+            field_width = field_width * 10 + (*fmt) - '0';
+            fmt++;
+        }
+
+        qualifier = -1;
+        if (*fmt == 'l') {
+            qualifier = 'l';
+            fmt++;
+            if (*fmt == 'l') {
+                qualifier = 'L';
+                fmt++;
+            }
+        }
+
         base = 10;
 
         switch (*fmt) {
@@ -108,17 +152,30 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
 
         case 's':
             s = va_arg(args, char *);
-            for (; *s != 0; ++s) {
+            len = strlen(s);
+
+            field_width = field_width < len ? len : field_width;
+
+            while (field_width > len && str < end && !(flags & LEFT)) {
+                *str++ = ' ';
+                field_width--;
+            }
+
+            for (; *s != 0; ++s, --field_width) {
                 if (str < end)
                     *str = *s;
                 str++;
             }
+
+            while (field_width-- > 0 && str < end)
+                *str++ = ' ';
+
             continue;
 
         case 'p':
             flags |= SPECIAL;
-            tmp = (unsigned long long)(unsigned long)va_arg(args, void *);
-            str = number(str, end, tmp, 16, flags);
+            tmp = (unsigned long)va_arg(args, void *);
+            str = number(str, end, tmp, 16, field_width, flags);
             continue;
 
         case '%':
@@ -147,9 +204,14 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
             break;
         }
 
-        /* 这里为了方便，将所有参数都当做int处理，尽管这不正确 */
-        tmp = (unsigned long long)va_arg(args, int);
-        str = number(str, end, tmp, base, flags);
+        if (qualifier == 'l')
+            tmp = va_arg(args, unsigned long);
+        else if (qualifier == 'L')
+            tmp = va_arg(args, unsigned long long);
+        else
+            tmp = va_arg(args, unsigned int);
+
+        str = number(str, end, tmp, base, field_width, flags);
     }
     *str = 0;
     return (str - buf);
