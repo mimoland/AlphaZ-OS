@@ -5,8 +5,7 @@ typedef unsigned char   u8;
 typedef unsigned short  u16;
 typedef unsigned int    u32;
 
-/* 32位机下无效 */
-typedef unsigned long   u64;
+typedef unsigned long long  u64;
 
 typedef unsigned long   size_t;
 typedef long long       loff_t;

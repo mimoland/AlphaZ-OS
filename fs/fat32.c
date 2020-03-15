@@ -264,10 +264,11 @@ static int fat32_readdir(struct file *filp, void *dirent, filldir_t filldir)
     fat32_directory_t *p;
     struct fat32_private_info *private;
     unsigned long sector, clus, index, offset;
-    loff_t pos;
+    loff_t pos, size;
     unsigned char *buffer;
     static char name[512];
-    int len, i;
+    int len, i, type;
+    u64 time;
 
     private = filp->f_dentry->d_sb->s_fs_info;
     assert(private != NULL);
@@ -309,8 +310,12 @@ next_clus:
     kfree(buffer);
     return NULL;
 founded:
+    type = p->DIR_Attr == ATTR_DIRECTORY ? FS_ATTR_DIR : FS_ATTR_FILE;
+    size = p->DIR_Attr == ATTR_DIRECTORY ? private->bytes_per_clus
+                                         : p->DIR_FileSize;
+    time = ((u64)p->DIR_WrtDate << 32) | p->DIR_WrtTime;
     kfree(buffer);
-    return filldir(dirent, name, len, 0, 0);
+    return filldir(dirent, name, len, size, time, type);
 }
 
 struct file_operations fat32_file_operations = {

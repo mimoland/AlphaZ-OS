@@ -43,14 +43,15 @@ struct dirent * readdir(struct DIR *dir)
     return (struct dirent *)dir->buf;
 }
 
-int default_filldir(void *dirent, const char *name, int len, loff_t pos, int type)
+int default_filldir(void *dirent, const char *name, int len, loff_t size, u64 time, int type)
 {
     struct dirent *d;
 
     d = (struct dirent *)dirent;
-    d->d_len = len;
-    d->d_offset = pos;
-    d->d_type = type;
-    strncpy(d->d_name, name, len);
+    d->size = size;
+    d->type = type;
+    d->wdata = (time >> 32) & 0xffffffff;
+    d->wtime = time &0xffffffff;
+    strncpy(d->name, name, len);
     return 1;
 }

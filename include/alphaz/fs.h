@@ -105,7 +105,7 @@ struct file {
     loff_t                  f_pos;      /* 当前文件位移量 */
 };
 
-typedef int (*filldir_t) (void *, const char *, int, loff_t, int);
+typedef int (*filldir_t) (void *, const char *, int, loff_t, u64, int);
 
 struct file_operations {
 	loff_t (*lseek) (struct file *, loff_t, int);        /* 改变文件的偏移位置 */
