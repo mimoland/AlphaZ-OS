@@ -2,10 +2,11 @@ ENTRY(_start)
 SECTIONS
 {
 
-	. = 0xc0000000 + 0x100000;
-	.text :
+	. = 0x100000 + 0xc0000000;
+	.text : AT(0x100000)
 	{
 		_text = .;
+		*(.multiboot_header);
         *(.head.text);
 		*(.text)
 		_etext = .;

@@ -27,7 +27,7 @@ export ARCH
 
 ifeq ($(ARCH), i386)
 	ASFLAGS += --32
-	CFLAGS += -m32
+	CFLAGS += -m32 -Wa,--32
 	LDFLAGS += -m elf_i386
 endif
 
@@ -37,7 +37,7 @@ endif
 
 srctree	:= $(CURDIR)
 build	:= build
-target	:= target
+target	:= iso/boot
 src-all	:=
 libs	:= arch.a init.a kernel.a mm.a drivers.a fs.a lib.a
 libs 	:= $(addprefix $(build)/, $(libs))
@@ -70,25 +70,12 @@ include kernel/Makefile
 src-all += $(src-kernel)
 
 all: config $(target)/kernel.bin
-	$(MAKE) -C arch/$(ARCH)/boot
+
+iso: all
+	grub-mkrescue -o alphaz.iso iso/
+
 PHONY += all
 
-buildimg:
-	dd if=$(target)/mbr.bin of=alphaz.vhd bs=512 count=1 conv=notrunc
-	dd if=$(target)/boot.bin of=alphaz.vhd bs=512 count=1 seek=2048 conv=notrunc
-	sudo modprobe nbd max_part=8
-	sudo qemu-nbd -f vpc -c /dev/nbd0 alphaz.vhd
-	sleep 0.5
-	sudo mount /dev/nbd0p1 /mnt/
-	sudo rm /mnt/*
-	sudo cp -fv $(target)/loader.bin /mnt/
-	sudo cp -fv $(target)/kernel.bin /mnt/
-	sudo umount /mnt
-	sudo qemu-nbd -d /dev/nbd0
-PHONY += buildimg
-
-image: all buildimg
-PHONY += image
 
 # 编译前对整个项目的配置。包括相关目录的生成以及创建目录链接等工作。所有子目录的Makefile的导入
 # 工作必须在此前完成。
@@ -106,15 +93,15 @@ PHONY += config
 
 clean:
 	rm -rf $(build)
-	rm -rf $(target)
+	rm -rf $(target)/kernel.bin
 PHONY += clean
 
 qemu:
-	qemu -hda alphaz.vhd -m 2G,slots=3,maxmem=4G
+	qemu-system-i386 -cdrom alphaz.iso -m 2G,slots=3,maxmem=4G
 PHONY += qemu
 
 debug:
-	@qemu -s -S -hda alphaz.vhd -m 2G,slots=3,maxmem=4G &
+	@qemu-system-i386 -s -S -cdrom alphaz.iso -m 2G,slots=3,maxmem=4G &
 	@gdb -x scripts/gdbinit
 	@kill $$(ps | grep qemu | awk '{print $$1 }')
 
@@ -133,8 +120,7 @@ $(build)/%.d: %.c config
 -include $(addprefix $(build)/, $(patsubst %.c, %.d, $(filter %.c, $(src-all))))
 
 $(build)/%.o: %.S
-	$(CC) $(CFLAGS) -E -D__ASSEMBLY__ $< > $(addprefix $(build)/, $(patsubst %.S, %.s, $<))
-	$(AS) $(ASFLAGS) -o $@ $(addprefix $(build)/, $(patsubst %.S, %.s, $<))
+	$(CC) $(CFLAGS) -D__ASSEMBLY__ -o $@ $<
 
 
 .PHONY = $(PHONY)
